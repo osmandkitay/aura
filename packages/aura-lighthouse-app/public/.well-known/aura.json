@@ -1,0 +1,318 @@
+{
+  "$schema": "https://aura.dev/schemas/v1.3.json",
+  "id": "https://aura-lighthouse.example.com/.well-known/aura.json",
+  "protocol": "AURA",
+  "version": "1.3",
+  "site": {
+    "name": "AURA Lighthouse Demo",
+    "description": "A demonstration site for AURA protocol capabilities",
+    "url": "https://aura-lighthouse.example.com"
+  },
+  "resources": {
+    "posts": {
+      "uriPattern": "/api/posts/{id}",
+      "description": "Blog post resource",
+      "operations": {
+        "GET": { "capabilityId": "read_post" },
+        "PUT": { "capabilityId": "update_post" },
+        "DELETE": { "capabilityId": "delete_post" }
+      }
+    },
+    "posts_collection": {
+      "uriPattern": "/api/posts",
+      "description": "Collection of blog posts",
+      "operations": {
+        "GET": { "capabilityId": "list_posts" },
+        "POST": { "capabilityId": "create_post" }
+      }
+    },
+    "auth": {
+      "uriPattern": "/api/auth/login",
+      "description": "Authentication endpoint",
+      "operations": {
+        "POST": { "capabilityId": "login" }
+      }
+    },
+    "user_profile": {
+      "uriPattern": "/api/user/profile",
+      "description": "User profile endpoint",
+      "operations": {
+        "GET": { "capabilityId": "get_profile" },
+        "PUT": { "capabilityId": "update_profile" }
+      }
+    }
+  },
+  "capabilities": {
+    "list_posts": {
+      "id": "list_posts",
+      "v": 1,
+      "description": "List all blog posts with optional filtering",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          "offset": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/posts{?limit,offset,tags*}",
+        "cors": true,
+        "encoding": "query",
+        "parameterMapping": {
+          "limit": "/limit",
+          "offset": "/offset",
+          "tags": "/tags"
+        }
+      }
+    },
+    "create_post": {
+      "id": "create_post",
+      "v": 1,
+      "description": "Create a new blog post",
+      "parameters": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "published": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/api/posts",
+        "cors": true,
+        "encoding": "json",
+        "parameterMapping": {
+          "title": "/title",
+          "content": "/content",
+          "tags": "/tags",
+          "published": "/published"
+        },
+        "security": {
+          "csrf": "header:X-CSRF-TOKEN"
+        }
+      }
+    },
+    "read_post": {
+      "id": "read_post",
+      "v": 1,
+      "description": "Read a specific blog post",
+      "parameters": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]+$"
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/posts/{id}",
+        "cors": true,
+        "parameterMapping": {
+          "id": "/id"
+        }
+      }
+    },
+    "update_post": {
+      "id": "update_post",
+      "v": 1,
+      "description": "Update an existing blog post",
+      "parameters": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "published": {
+            "type": "boolean"
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "PUT",
+        "urlTemplate": "/api/posts/{id}",
+        "cors": true,
+        "encoding": "json",
+        "parameterMapping": {
+          "id": "/id",
+          "title": "/title",
+          "content": "/content",
+          "tags": "/tags",
+          "published": "/published"
+        },
+        "security": {
+          "csrf": "header:X-CSRF-TOKEN"
+        }
+      }
+    },
+    "delete_post": {
+      "id": "delete_post",
+      "v": 1,
+      "description": "Delete a blog post",
+      "parameters": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]+$"
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "DELETE",
+        "urlTemplate": "/api/posts/{id}",
+        "cors": true,
+        "parameterMapping": {
+          "id": "/id"
+        },
+        "security": {
+          "csrf": "header:X-CSRF-TOKEN"
+        }
+      }
+    },
+    "login": {
+      "id": "login",
+      "v": 1,
+      "description": "Authenticate user with email and password",
+      "parameters": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/api/auth/login",
+        "cors": true,
+        "encoding": "json",
+        "parameterMapping": {
+          "email": "/email",
+          "password": "/password"
+        }
+      }
+    },
+    "get_profile": {
+      "id": "get_profile",
+      "v": 1,
+      "description": "Get current user's profile",
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/user/profile",
+        "cors": true
+      }
+    },
+    "update_profile": {
+      "id": "update_profile",
+      "v": 1,
+      "description": "Update current user's profile",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "PUT",
+        "urlTemplate": "/api/user/profile",
+        "cors": true,
+        "encoding": "json",
+        "parameterMapping": {
+          "name": "/name",
+          "bio": "/bio",
+          "avatar": "/avatar"
+        },
+        "security": {
+          "csrf": "header:X-CSRF-TOKEN"
+        }
+      }
+    }
+  },
+  "policy": {
+    "rateLimit": {
+      "limit": 120,
+      "window": "minute"
+    },
+    "authHint": "cookie"
+  }
+} 

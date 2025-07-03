@@ -1,0 +1,21 @@
+{
+  "name": "@aura/ai-core-cli",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aura/protocol": "workspace:*",
+    "@types/node": "^24.0.10",
+    "axios": "^1.10.0",
+    "commander": "^14.0.0",
+    "dotenv": "^17.0.0",
+    "openai": "^5.8.2",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "composite": true,
+    "declaration": true
+  },
+  "files": [],
+  "references": [
+    { "path": "packages/aura-protocol" },
+    { "path": "packages/ai-core-cli" }
+  ]
+} 
