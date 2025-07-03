@@ -80,10 +80,12 @@ export interface Policy {
   // Machine-readable rate limit
   rateLimit?: {
     limit: number; // e.g., 120
-    window: 'second' | 'minute' | 'hour';
+    window: 'second' | 'minute' | 'hour' | 'day';
   };
   // Provides a hint to the agent about authentication
   authHint?: 'none' | 'cookie' | 'bearer' | 'oauth2' | '401_challenge';
+  // Cookie names that are important for authentication
+  cookieNames?: string[];
 }
 
 /**

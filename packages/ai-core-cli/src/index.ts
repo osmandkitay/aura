@@ -6,6 +6,8 @@ import { AuraManifest, Capability, AURAEvent, AuraState } from '@aura/protocol';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { URI } from 'uri-template-lite';
+import * as lockfile from 'proper-lockfile';
 
 let wss: WebSocketServer | null = null;
 let emissaryClient: WebSocket | null = null;
@@ -53,15 +55,18 @@ function createWebSocketServer() {
   return wss;
 }
 
-function handleAURAEvent(event: AURAEvent) {
+async function handleAURAEvent(event: AURAEvent) {
   switch (event.payload.type) {
     case 'AUTH_TOKEN_ACQUIRED':
       console.log('Auth token acquired:', event.payload.data);
-      // Store auth token in cache
-      fs.writeFileSync(
-        path.join(cacheDir, 'auth-token.json'),
-        JSON.stringify(event.payload.data)
-      );
+      // Store auth token in cache with file lock
+      const authTokenFile = path.join(cacheDir, 'auth-token.json');
+      try {
+        await lockfile.lock(cacheDir, { retries: 3 });
+        fs.writeFileSync(authTokenFile, JSON.stringify(event.payload.data));
+      } finally {
+        await lockfile.unlock(cacheDir);
+      }
       break;
     case 'CAPTCHA_SOLVED':
       console.log('Captcha solved:', event.payload.data);
@@ -86,42 +91,21 @@ function parseAuraStateHeader(headers: any): AuraState | null {
 }
 
 function buildHttpRequest(capability: Capability, args: Record<string, any>, baseUrl: string) {
-  let url = `${baseUrl}${capability.action.urlTemplate}`;
-  let params: Record<string, any> = {};
+  const template = new URI.Template(capability.action.urlTemplate);
+  const expandedUrl = template.expand(args);
+
   let body: any = null;
-  
-  // Replace path parameters
-  for (const [param, jsonPointer] of Object.entries(capability.action.parameterMapping)) {
-    const value = jsonPointer === `/${param}` ? args[param] : null;
-    if (value !== undefined && url.includes(`{${param}}`)) {
-      url = url.replace(`{${param}}`, encodeURIComponent(value));
-    } else if (value !== undefined) {
-      params[param] = value;
+  if (capability.action.method !== 'GET' && capability.action.method !== 'DELETE') {
+    if (capability.action.encoding === 'json' || capability.action.encoding === 'multipart') {
+      // For JSON/multipart, the body is the arguments not used in the path
+      const pathParams = new Set(new URI.Template(capability.action.urlTemplate).keys.map((k: any) => k.name));
+      body = Object.fromEntries(
+        Object.entries(args).filter(([key]) => !pathParams.has(key))
+      );
     }
   }
-  
-  // Handle query parameters (RFC 6570 style)
-  if (capability.action.encoding === 'query' || capability.action.method === 'GET') {
-    const queryMatch = url.match(/\{[?&]([^}]+)\}/);
-    if (queryMatch) {
-      url = url.replace(queryMatch[0], '');
-      const queryParams = new URLSearchParams();
-      for (const [key, value] of Object.entries(params)) {
-        if (Array.isArray(value)) {
-          value.forEach(v => queryParams.append(key, v));
-        } else if (value !== undefined) {
-          queryParams.set(key, String(value));
-        }
-      }
-      if (queryParams.toString()) {
-        url += '?' + queryParams.toString();
-      }
-    }
-  } else if (capability.action.method === 'POST' || capability.action.method === 'PUT' || capability.action.method === 'DELETE') {
-    body = params;
-  }
-  
-  return { url, body };
+
+  return { url: `${baseUrl}${expandedUrl}`, body };
 }
 
 async function executeCapability(
@@ -144,9 +128,19 @@ async function executeCapability(
   };
   
   // Add CSRF token if required
-  if (capability.action.security?.csrf && capability.action.security.csrf.startsWith('header:')) {
-    const headerName = capability.action.security.csrf.replace('header:', '');
-    headers[headerName] = 'demo-csrf-token'; // In production, fetch this dynamically
+  const csrfConfig = capability.action.security?.csrf;
+  if (csrfConfig) {
+    if (csrfConfig.startsWith('header:')) {
+      const headerName = csrfConfig.replace('header:', '');
+      // This is a placeholder; in a real scenario, the token would be stored
+      headers[headerName] = 'demo-static-csrf-token';   
+    } else if (csrfConfig.startsWith('fetch:')) {
+      const fetchUrl = `${baseUrl}${csrfConfig.replace('fetch:', '')}`;
+      console.log(`Fetching dynamic CSRF token from ${fetchUrl}...`);
+      const csrfResponse = await axios.get(fetchUrl);
+      const token = csrfResponse.data.token;
+      headers['X-CSRF-Token'] = token; // Assuming standard header name
+    }
   }
   
   // Add auth token if available
@@ -171,11 +165,14 @@ async function executeCapability(
     const auraState = parseAuraStateHeader(response.headers);
     if (auraState) {
       console.log('AURA-State:', auraState);
-      // Cache the state
-      fs.writeFileSync(
-        path.join(cacheDir, 'aura-state.json'),
-        JSON.stringify(auraState)
-      );
+      // Cache the state with file lock
+      const stateFile = path.join(cacheDir, 'aura-state.json');
+      try {
+        await lockfile.lock(cacheDir, { retries: 3 });
+        fs.writeFileSync(stateFile, JSON.stringify(auraState));
+      } finally {
+        await lockfile.unlock(cacheDir);
+      }
     }
     
     return {

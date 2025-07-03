@@ -13,6 +13,8 @@
     "commander": "^14.0.0",
     "dotenv": "^17.0.0",
     "openai": "^5.8.2",
+    "proper-lockfile": "^4.1.2",
+    "uri-template-lite": "^23.4.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {

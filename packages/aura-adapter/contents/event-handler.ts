@@ -129,50 +129,6 @@ function sendAURAEvent(type: AURAEvent['payload']['type'], data: any) {
   }
 }
 
-// Listen for authentication-related events
-function setupAuthListeners() {
-  // Monitor cookie changes
-  chrome.cookies.onChanged.addListener((changeInfo) => {
-    if (changeInfo.cookie.name === 'auth-token' && !changeInfo.removed) {
-      sendAURAEvent('AUTH_TOKEN_ACQUIRED', {
-        token: changeInfo.cookie.value,
-        domain: changeInfo.cookie.domain,
-        expiresAt: changeInfo.cookie.expirationDate 
-          ? new Date(changeInfo.cookie.expirationDate * 1000).toISOString() 
-          : null
-      });
-    }
-  });
-  
-  // Monitor localStorage changes for tokens
-  const originalSetItem = localStorage.setItem;
-  localStorage.setItem = function(key: string, value: string) {
-    originalSetItem.apply(this, [key, value]);
-    
-    if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {
-      sendAURAEvent('AUTH_TOKEN_ACQUIRED', {
-        storage: 'localStorage',
-        key,
-        value
-      });
-    }
-  };
-  
-  // Monitor sessionStorage changes
-  const originalSessionSetItem = sessionStorage.setItem;
-  sessionStorage.setItem = function(key: string, value: string) {
-    originalSessionSetItem.apply(this, [key, value]);
-    
-    if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {
-      sendAURAEvent('AUTH_TOKEN_ACQUIRED', {
-        storage: 'sessionStorage',
-        key,
-        value
-      });
-    }
-  };
-}
-
 // Monitor navigation for redirects
 function setupNavigationListeners() {
   // Initial page load
@@ -213,13 +169,60 @@ function setupNavigationListeners() {
   });
 }
 
+// Listen for forwarded events from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'FORWARD_AURA_EVENT' && message.event) {
+    sendAURAEvent(message.event.payload.type, message.event.payload.data);
+  }
+});
+
+// Inject script to monitor storage changes in page context
+function injectStorageMonitor() {
+  const script = document.createElement('script');
+  script.textContent = `
+    (function() {
+      const sendEvent = (storageType, key, value) => {
+        window.postMessage({
+          type: 'AURA_STORAGE_EVENT',
+          detail: { storage: storageType, key, value }
+        }, '*');
+      };
+
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = function(key, value) {
+        if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {
+          sendEvent('localStorage', key, value);
+        }
+        originalSetItem.apply(this, arguments);
+      };
+
+      const originalSessionSetItem = sessionStorage.setItem;
+      sessionStorage.setItem = function(key, value) {
+        if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {
+          sendEvent('sessionStorage', key, value);
+        }
+        originalSessionSetItem.apply(this, arguments);
+      };
+    })();
+  `;
+  (document.head || document.documentElement).appendChild(script);
+  script.remove(); // Clean up the script tag
+
+  // Listen for messages from the injected script
+  window.addEventListener('message', (event) => {
+    if (event.source === window && event.data.type === 'AURA_STORAGE_EVENT') {
+      sendAURAEvent('AUTH_TOKEN_ACQUIRED', event.data.detail);
+    }
+  });
+}
+
 // Initialize everything
 (async function init() {
   console.log('AURA Event Handler initializing...');
   
   await initDB();
   connectWebSocket();
-  setupAuthListeners();
+  injectStorageMonitor();
   setupNavigationListeners();
   
   console.log('AURA Event Handler initialized');

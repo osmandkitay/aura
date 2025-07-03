@@ -1,10 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-
-// Import the posts array from the index file (in a real app, this would be a database)
-import { posts } from './index';
-
-// Export posts array for other endpoints
-export { posts };
+import { posts } from '../../../lib/db';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
