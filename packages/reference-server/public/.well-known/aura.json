@@ -256,6 +256,9 @@
         "parameterMapping": {
           "email": "/email",
           "password": "/password"
+        },
+        "security": {
+          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     },

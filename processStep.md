@@ -1,360 +1,259 @@
-# **AURA v1.3 Final Polish: Step-by-Step Refactoring Guide**
-
-## **Introduction**
-
-This document provides a clear, step-by-step process to implement the final, critical fixes on your codebase. Following these steps will resolve the identified bugs, harden the architecture, and align the implementation perfectly with the v1.3 specification.
-
-The process is divided into three parts:
-
-1. **Part 1: Critical Bug Fixes:** Addressing issues that currently break core functionality.  
-2. **Part 2: Robustness & Feature Enhancements:** Implementing features that make the system more resilient and capable.  
-3. **Part 3: Final Polish & Verification:** Small but important tweaks for production readiness.
-
-Execute these steps in the specified order.
-
-## **Part 1: Critical Bug Fixes (Unblockers)**
-
-### **Step 1.1: Relocate Cookie Listener to Background Script**
-
-**\[FIX\]**
-
-* **File(s):**  
-  * packages/aura-adapter/contents/event-handler.ts (Remove from here)  
-  * packages/aura-adapter/background.ts (Add to here)  
-* **Why:** The chrome.cookies API is not available in content scripts. The listener must live in the background script to function correctly.  
-* **Code Changes:**  
-  1. **DELETE** the following code block from packages/aura-adapter/contents/event-handler.ts:  
-     // DELETE THIS ENTIRE BLOCK  
-     // Monitor cookie changes  
-     chrome.cookies.onChanged.addListener((changeInfo) \=\> {  
-       // ... implementation ...  
-     });
-
-  2. **ADD** this logic to packages/aura-adapter/background.ts:  
-     // ADD THIS TO background.ts, inside setupAuthListeners()
-
-     chrome.cookies.onChanged.addListener((changeInfo) \=\> {  
-       // We only care about auth-related cookies being set, not removed  
-       if (changeInfo.removed) {  
-         return;  
-       }
-
-       // Check if the cookie name suggests it's an auth token  
-       if (changeInfo.cookie.name.toLowerCase().includes('auth')) {  
-         console.log('Auth-related cookie changed:', changeInfo.cookie.name);
-
-         // Forward this event to the active tab's content script,  
-         // which will then send it to the AI Core via WebSocket.  
-         forwardEventToActiveTab({  
-           type: 'AUTH\_TOKEN\_ACQUIRED',  
-           data: {  
-             source: 'cookie',  
-             cookie: {  
-               name: changeInfo.cookie.name,  
-               domain: changeInfo.cookie.domain,  
-               value: changeInfo.cookie.value,  
-             }  
-           }  
-         });  
-       }  
-     });
-
-  3. You will also need a helper function in background.ts to forward events:  
-     // ADD THIS HELPER FUNCTION TO background.ts
-
-     function forwardEventToActiveTab(payload: AURAEvent\['payload'\]) {  
-       const event: AURAEvent \= {  
-         protocol: 'AURAEvent',  
-         version: '1.0',  
-         eventId: \`bg-${Date.now()}\`,  
-         payload,  
-       };
-
-       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) \=\> {  
-         if (tabs\[0\] && tabs\[0\].id) {  
-           chrome.tabs.sendMessage(tabs\[0\].id, {  
-             type: 'FORWARD\_AURA\_EVENT',  
-             event  
-           }).catch(() \=\> console.error('Failed to forward event. Content script may not be ready.'));  
-         }  
-       });  
-     }
-
-  4. Finally, update event-handler.ts to listen for these forwarded events:  
-     // ADD THIS TO event-handler.ts  
-     chrome.runtime.onMessage.addListener((message, sender, sendResponse) \=\> {  
-       if (message.type \=== 'FORWARD\_AURA\_EVENT' && message.event) {  
-         sendAURAEvent(message.event.payload.type, message.event.payload.data);  
-       }  
-     });
-
-### **Step 1.2: Fix localStorage Monitoring with Script Injection**
-
-**\[FIX\]**
-
-* **File(s):** packages/aura-adapter/contents/event-handler.ts  
-* **Why:** Content scripts run in an "isolated world" and cannot directly override the page's localStorage.setItem. The correct method is to inject a script into the page's main world.  
-* **Code Changes:**  
-  1. **DELETE** the localStorage and sessionStorage override blocks from event-handler.ts.  
-  2. **ADD** this new function and call it inside your main init() function in event-handler.ts:  
-     // ADD THIS FUNCTION TO event-handler.ts
-
-     function injectStorageMonitor() {  
-       const script \= document.createElement('script');  
-       script.textContent \= \`  
-         (function() {  
-           const sendEvent \= (storageType, key, value) \=\> {  
-             window.postMessage({  
-               type: 'AURA\_STORAGE\_EVENT',  
-               detail: { storage: storageType, key, value }  
-             }, '\*');  
-           };
-
-           const originalSetItem \= localStorage.setItem;  
-           localStorage.setItem \= function(key, value) {  
-             if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {  
-               sendEvent('localStorage', key, value);  
-             }  
-             originalSetItem.apply(this, arguments);  
-           };
-
-           const originalSessionSetItem \= sessionStorage.setItem;  
-           sessionStorage.setItem \= function(key, value) {  
-             if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {  
-               sendEvent('sessionStorage', key, value);  
-             }  
-             originalSessionSetItem.apply(this, arguments);  
-           };  
-         })();  
-       \`;  
-       (document.head || document.documentElement).appendChild(script);  
-       script.remove(); // Clean up the script tag
-
-       // Listen for messages from the injected script  
-       window.addEventListener('message', (event) \=\> {  
-         if (event.source \=== window && event.data.type \=== 'AURA\_STORAGE\_EVENT') {  
-           sendAURAEvent('AUTH\_TOKEN\_ACQUIRED', event.data.detail);  
-         }  
-       });  
-     }
-
-     // CALL IT IN YOUR (async function init() { ... })  
-     injectStorageMonitor();
-
-### **Step 1.3: Remove Inefficient HEAD Request from Content Script**
-
-**\[REPLACE\]**
-
-* **File(s):** packages/aura-adapter/contents/aura-detector.ts  
-* **Why:** The fetch call from a content script is unreliable due to CORS and CSP. The webRequest API in background.ts is the single source of truth for AURA support and state. The content script should simply ask the background script.  
-* **Code Changes:**  
-  1. **DELETE** the entire content of packages/aura-adapter/contents/aura-detector.ts.  
-  2. **REPLACE** it with this simplified logic:  
-     // New content for aura-detector.ts  
-     import type { PlasmoCSConfig } from "plasmo";
-
-     export const config: PlasmoCSConfig \= {  
-       matches: \["\<all\_urls\>"\],  
-       run\_at: "document\_end"  
-     };
-
-     // Ask the background script for the status of the current tab  
-     chrome.runtime.sendMessage({ type: 'GET\_AURA\_SUPPORT\_STATUS' }, (response) \=\> {  
-       if (chrome.runtime.lastError) {  
-         // Handle error, e.g., background script not ready  
-         return;  
-       }  
-       if (response && response.status) {  
-         // The background script has already detected and stored the status.  
-         // Now, we update the storage for the popup to use.  
-         chrome.storage.local.set({ auraStatus: response.status });  
-       }  
-     });
-
-  3. You will need to update background.ts to handle this message:  
-     // ADD THIS TO background.ts
-
-     // Store manifest URL by tab ID  
-     const auraManifestUrlByTab: Map\<number, string\> \= new Map();
-
-     // Inside the onHeadersReceived listener, when you find a manifest:  
-     // ...  
-     // auraManifestUrlByTab.set(details.tabId, manifestUrl);  
-     // ...
-
-     // Add this listener to handle messages from content scripts  
-     chrome.runtime.onMessage.addListener((message, sender, sendResponse) \=\> {  
-       if (message.type \=== 'GET\_AURA\_SUPPORT\_STATUS' && sender.tab?.id) {  
-         const tabId \= sender.tab.id;  
-         const manifestUrl \= auraManifestUrlByTab.get(tabId);  
-         const status \= {  
-           supported: \!\!manifestUrl,  
-           url: manifestUrl || '',  
-           version: manifestUrl ? '1.3' : '' // Assuming v1.3 if detected this way  
-         };  
-         sendResponse({ status });  
-       }  
-       return true; // For async response  
-     });
-
-## **Part 2: Robustness & Feature Enhancements**
-
-### **Step 2.1: Implement Robust URI Template Parser**
-
-**\[REPLACE\]**
-
-* **File(s):** packages/ai-core-cli/src/index.ts  
-* **Why:** The current RegEx-based URL builder is fragile and doesn't fully support RFC 6570, especially for array-based query parameters.  
-* **Code Changes:**  
-  1. **Install a library:**  
-     npm install uri-template-lite
-
-  2. **REPLACE** the buildHttpRequest function with this new version:  
-     // REPLACE the old function in ai-core-cli/src/index.ts  
-     import { URI } from 'uri-template-lite';
-
-     function buildHttpRequest(capability: Capability, args: Record\<string, any\>, baseUrl: string) {  
-       const template \= new URI.Template(capability.action.urlTemplate);  
-       const expandedUrl \= template.expand(args);
-
-       let body: any \= null;  
-       if (capability.action.method \!== 'GET' && capability.action.method \!== 'DELETE') {  
-         if (capability.action.encoding \=== 'json' || capability.action.encoding \=== 'multipart') {  
-           // For JSON/multipart, the body is the arguments not used in the path  
-           const pathParams \= new Set(new URI.Template(capability.action.urlTemplate).keys.map(k \=\> k.name));  
-           body \= Object.fromEntries(  
-             Object.entries(args).filter((\[key\]) \=\> \!pathParams.has(key))  
-           );  
-         }  
-       }
-
-       return { url: \`${baseUrl}${expandedUrl}\`, body };  
-     }
-
-### **Step 2.2: Implement Dynamic CSRF Token Fetching**
-
-**\[UPDATE\]**
-
-* **File(s):**  
-  * packages/ai-core-cli/src/index.ts  
-  * packages/aura-lighthouse-app/pages/api/csrf-token.ts (New file)  
-* **Why:** To support sites with dynamic CSRF tokens, the agent must be able to fetch them before making a POST/PUT/DELETE request.  
-* **Code Changes:**  
-  1. **CREATE** a new API endpoint in the demo app:  
-     // CREATE THIS FILE: packages/aura-lighthouse-app/pages/api/csrf-token.ts  
-     import type { NextApiRequest, NextApiResponse } from 'next';  
-     import { serialize } from 'cookie';
-
-     export default function handler(req: NextApiRequest, res: NextApiResponse) {  
-       // In a real app, generate and store this token in the user's session  
-       const csrfToken \= \`csrf\_${Math.random().toString(36).substr(2, 10)}\`;
-
-       // Set a double-submit cookie  
-       res.setHeader('Set-Cookie', serialize('csrf-token', csrfToken, {  
-         path: '/',  
-         httpOnly: true, // For security  
-       }));
-
-       // Return the token in the response body for the agent to use in headers  
-       res.status(200).json({ token: csrfToken });  
-     }
-
-  2. **UPDATE** the executeCapability function in ai-core-cli/src/index.ts:  
-     // UPDATE this section in executeCapability
-
-     const headers: Record\<string, string\> \= { /\* ... \*/ };
-
-     // Add CSRF token if required  
-     const csrfConfig \= capability.action.security?.csrf;  
-     if (csrfConfig) {  
-       if (csrfConfig.startsWith('header:')) {  
-         const headerName \= csrfConfig.replace('header:', '');  
-         // This is a placeholder; in a real scenario, the token would be stored  
-         headers\[headerName\] \= 'demo-static-csrf-token';   
-       } else if (csrfConfig.startsWith('fetch:')) {  
-         const fetchUrl \= \`${baseUrl}${csrfConfig.replace('fetch:', '')}\`;  
-         console.log(\`Fetching dynamic CSRF token from ${fetchUrl}...\`);  
-         const csrfResponse \= await axios.get(fetchUrl);  
-         const token \= csrfResponse.data.token;  
-         headers\['X-CSRF-Token'\] \= token; // Assuming standard header name  
-       }  
-     }
-
-### **Step 2.3: Add File Lock for State Cache**
-
-**\[UPDATE\]**
-
-* **File(s):** packages/ai-core-cli/src/index.ts  
-* **Why:** To prevent race conditions when multiple CLI processes access the same cache files.  
-* **Code Changes:**  
-  1. **Install a library:**  
-     npm install proper-lockfile
-
-  2. **UPDATE** the file writing logic in ai-core-cli:  
-     // UPDATE file writing in ai-core-cli/src/index.ts  
-     import \* as lockfile from 'proper-lockfile';
-
-     // Example: Caching the AURA state  
-     const stateFile \= path.join(cacheDir, 'aura-state.json');  
-     try {  
-       await lockfile.lock(cacheDir, { retries: 3 });  
-       fs.writeFileSync(stateFile, JSON.stringify(auraState));  
-     } finally {  
-       await lockfile.unlock(cacheDir);  
-     }
-
-## **Part 3: Final Polish & Verification**
-
-### **Step 3.1: Refine Protocol Definitions**
-
-**\[UPDATE\]**
-
-* **File(s):** packages/aura-protocol/src/index.ts  
-* **Why:** To incorporate the final small but useful additions from our review.  
-* **Code Changes:**  
-  // In packages/aura-protocol/src/index.ts
-
-  export interface Policy {  
-    rateLimit?: {  
-      limit: number;  
-      window: 'second' | 'minute' | 'hour' | 'day'; // ADD 'day'  
-    };  
-    authHint?: 'none' | 'cookie' | 'bearer' | 'oauth2' | '401\_challenge';  
-    // ADD cookieNames for precision  
-    cookieNames?: string\[\];   
-  }
-
-  export interface HttpAction {  
-    // ...  
-    encoding?: 'json' | 'form-data' | 'multipart' | 'query'; // ADD 'multipart'  
-    // ...  
-  }
-
-### **Step 3.2: Fix Module Import Cycle**
-
-**\[REFACTOR\]**
-
-* **File(s):**  
-  * packages/aura-lighthouse-app/pages/api/posts/index.ts  
-  * packages/aura-lighthouse-app/pages/api/posts/\[id\].ts  
-  * packages/aura-lighthouse-app/lib/db.ts (New file)  
-* **Why:** To resolve the hot-reload warning and improve code organization.  
-* **Code Changes:**  
-  1. **CREATE** packages/aura-lighthouse-app/lib/db.ts:  
-     // Mock database  
-     export const posts: any\[\] \= \[ /\* ... your posts array ... \*/ \];
-
-  2. **UPDATE** both index.ts and \[id\].ts to import from the new file:  
-     // In both post API files  
-     import { posts } from '../../../lib/db';
-
-  3. **REMOVE** the export { posts } line from \[id\].ts.
-
-### **Step 3.3: Final Verification**
-
-**\[VERIFY\]**
-
-1. **Run npm install** in the root to install the new dependencies (uri-template-lite, proper-lockfile).  
-2. **Run your build script** for the @aura/protocol package to ensure the schema is regenerated with the latest changes.  
-3. **Run npx aura-validate** against your aura.json file to confirm it's still valid.  
-4. **Test the full flow:** Run the CLI with a prompt that requires a POST request to verify the CSRF fetching and new request builder are working.
+## **AURA Protocol: Refactoring for a Universal Vision**
+
+This document outlines the step-by-step process to transform the AURA project from a proof-of-concept application into a clean, lightweight, and universal protocol specification. The goal is to create a foundational repository that clearly communicates the vision for a new standard of AI-web interaction.
+
+### **Philosophy: Protocol, Not Platform**
+
+Our guiding principle is to present AURA as a **protocol**, not a specific platform or application. The repository should serve as the canonical source for the AURA specification, with minimal, clean examples of how to implement it. Others will build the ecosystem (browser extensions, complex agents, framework integrations) on top of this foundation.
+
+### **Step 1: Drastic Simplification \- Delete Non-Core Packages**
+
+The first and most critical step is to remove all implementation-specific code that clouds the core protocol's message. Be bold. This is addition by subtraction.
+
+**Your Task:** Delete the following entire directories from the packages/ folder. They are excellent proofs-of-concept but distract from the universal standard we are defining.
+
+* **Sub-task: Delete the AI Core CLI.**  
+  * **Command:** rm \-rf packages/ai-core-cli  
+  * **Reasoning:** This package mixes too many concerns (LLM orchestration, WebSocket server, CLI). It makes AURA seem like a complex, monolithic application. We will replace its essential function with a much simpler reference client.  
+* **Sub-task: Delete the Browser Adapter.**  
+  * **Command:** rm \-rf packages/aura-adapter  
+  * **Reasoning:** This is the most important deletion. The Chrome Extension is a *specific application* of AURA. By removing it, we sever the incorrect notion that AURA *requires* a browser extension to function. This immediately elevates the project to a more universal, backend-agnostic protocol.
+
+After this step, your packages directory should only contain aura-protocol and aura-lighthouse-app.
+
+### **Step 2: Restructure and Reframe Remaining Packages**
+
+Now, we will rename and reposition the remaining packages to reflect their roles as *examples* of the protocol, not the protocol itself.
+
+* **Sub-task: Rename the Lighthouse App to reference-server.**  
+  * **Command:** mv packages/aura-lighthouse-app packages/reference-server  
+  * **Reasoning:** Its name must reflect its purpose. It is the official "Reference Server Implementation" for the AURA protocol, demonstrating how any web developer can make their site AURA-compliant.  
+* **Sub-task: Update the package.json inside reference-server.**  
+  * **Action:** Open packages/reference-server/package.json and change the "name" field.  
+  * **From:** "name": "aura-lighthouse-app"  
+  * **To:** "name": "aura-reference-server"
+
+### **Step 3: Create a Minimalist Reference Client**
+
+We will now create a new package that demonstrates how to *consume* the protocol in its purest form, without any browser dependencies. This will showcase two powerful use-cases.
+
+* **Sub-task: Create the package directory.**  
+  * **Command:** mkdir \-p packages/reference-client/src  
+* **Sub-task: Create the package.json for the client.**  
+  * **Action:** Create a new file at packages/reference-client/package.json.  
+  * **Content:**  
+    {  
+      "name": "aura-reference-client",  
+      "version": "1.0.0",  
+      "private": true,  
+      "scripts": {  
+        "agent": "ts-node src/agent.ts",  
+        "crawler": "ts-node src/crawler.ts"  
+      },  
+      "dependencies": {  
+        "@aura/protocol": "workspace:\*",  
+        "axios": "^1.7.2",  
+        "commander": "^12.1.0",  
+        "dotenv": "^16.4.5",  
+        "openai": "^4.52.0",  
+        "ts-node": "^10.9.2",  
+        "typescript": "^5.4.5"  
+      }  
+    }
+
+* **Sub-task: Create the "Agent" example.**  
+  * **Action:** Create a new file at packages/reference-client/src/agent.ts. This is a stripped-down, backend-only version of your old CLI.  
+  * **Content:**  
+    // packages/reference-client/src/agent.ts  
+    import 'dotenv/config';  
+    import axios from 'axios';  
+    import OpenAI from 'openai';  
+    import { AuraManifest, AuraState } from '@aura/protocol';
+
+    const openai \= new OpenAI({ apiKey: process.env.OPENAI\_API\_KEY });
+
+    /\*\*  
+     \* Fetches the AURA manifest from a given base URL.  
+     \*/  
+    async function fetchManifest(baseUrl: string): Promise\<AuraManifest\> {  
+        const manifestUrl \= \`${baseUrl}/.well-known/aura.json\`;  
+        console.log(\`\[1/3\] Fetching AURA manifest from ${manifestUrl}...\`);  
+        const response \= await axios.get\<AuraManifest\>(manifestUrl);  
+        console.log(\`\[1/3\] Success. Site: ${response.data.site.name}\`);  
+        return response.data;  
+    }
+
+    /\*\*  
+     \* Uses an LLM to decide which capability to use based on a user prompt.  
+     \*/  
+    async function planAction(manifest: AuraManifest, prompt: string, state?: AuraState | null): Promise\<{ capabilityId: string; args: any; }\> {  
+        console.log(\`\[2/3\] Planning action for prompt: "${prompt}"\`);  
+        const tools \= Object.values(manifest.capabilities).map(cap \=\> ({  
+            type: 'function' as const,  
+            function: {  
+                name: cap.id,  
+                description: cap.description,  
+                parameters: cap.parameters || { type: 'object', properties: {} },  
+            },  
+        }));
+
+        const completion \= await openai.chat.completions.create({  
+            model: 'gpt-4o-mini',  
+            messages: \[  
+                {  
+                    role: 'system',  
+                    content: \`You are an AI agent controller. Your task is to select the single best capability to fulfill the user's request. Current site state is: ${JSON.stringify(state, null, 2)}\`  
+                },  
+                { role: 'user', content: prompt }  
+            \],  
+            tools,  
+            tool\_choice: 'auto',  
+        });
+
+        const toolCall \= completion.choices\[0\].message.tool\_calls?.\[0\];  
+        if (\!toolCall) {  
+            throw new Error("LLM did not select a capability to execute.");  
+        }
+
+        console.log(\`\[2/3\] LLM selected capability: ${toolCall.function.name}\`);  
+        return {  
+            capabilityId: toolCall.function.name,  
+            args: JSON.parse(toolCall.function.arguments),  
+        };  
+    }
+
+    /\*\*  
+     \* Executes the chosen capability via a direct HTTP request.  
+     \*/  
+    async function executeAction(baseUrl: string, manifest: AuraManifest, capabilityId: string, args: any): Promise\<{ status: number; data: any; state: AuraState | null; }\> {  
+        console.log(\`\[3/3\] Executing capability "${capabilityId}"...\`);  
+        const capability \= manifest.capabilities\[capabilityId\];  
+        if (\!capability) throw new Error(\`Capability ${capabilityId} not found.\`);
+
+        // Note: This is a simplified HTTP builder. A real library would handle URL templating more robustly.  
+        const url \= \`${baseUrl}${capability.action.urlTemplate.split('{')\[0\]}\`;
+
+        const response \= await axios({  
+            method: capability.action.method,  
+            url: url,  
+            data: (capability.action.method \!== 'GET' && capability.action.method \!== 'DELETE') ? args : null,  
+            params: (capability.action.method \=== 'GET' || capability.action.method \=== 'DELETE') ? args : null,  
+            validateStatus: () \=\> true, // Accept all status codes  
+        });
+
+        const auraStateHeader \= response.headers\['aura-state'\];  
+        let auraState: AuraState | null \= null;  
+        if (auraStateHeader) {  
+            auraState \= JSON.parse(Buffer.from(auraStateHeader, 'base64').toString('utf-8'));  
+        }
+
+        console.log(\`\[3/3\] Execution complete. Status: ${response.status}\`);  
+        return { status: response.status, data: response.data, state: auraState };  
+    }
+
+    // Main execution flow  
+    async function main() {  
+        const url \= process.argv\[2\];  
+        const prompt \= process.argv\[3\];
+
+        if (\!url || \!prompt) {  
+            console.error('Usage: npm run agent \<url\> "\<prompt\>"');  
+            process.exit(1);  
+        }
+
+        try {  
+            const manifest \= await fetchManifest(url);  
+            const { capabilityId, args } \= await planAction(manifest, prompt);  
+            const result \= await executeAction(url, manifest, capabilityId, args);
+
+            console.log('\\n--- Execution Result \---');  
+            console.log('Status:', result.status);  
+            console.log('Data:', JSON.stringify(result.data, null, 2));  
+            console.log('New AURA-State:', JSON.stringify(result.state, null, 2));  
+            console.log('----------------------\\n');
+
+        } catch (error) {  
+            console.error("\\nAn error occurred:", (error as Error).message);  
+        }  
+    }
+
+    main();
+
+* **Sub-task: Create the "Crawler" example.**  
+  * **Action:** Create a new file at packages/reference-client/src/crawler.ts. This is the lightweight script with the huge vision.  
+  * **Content:**  
+    // packages/reference-client/src/crawler.ts  
+    import axios from 'axios';  
+    import { AuraManifest } from '@aura/protocol';
+
+    /\*\*  
+     \* This script demonstrates how a search engine or indexer could crawl an AURA-enabled site.  
+     \* Instead of just indexing text content, it indexes the site's semantic capabilities.  
+     \*/  
+    async function crawlSiteForCapabilities(baseUrl: string) {  
+        console.log(\`Crawling ${baseUrl} for AURA capabilities...\`);  
+        try {  
+            const manifestUrl \= \`${baseUrl}/.well-known/aura.json\`;  
+            const response \= await axios.get\<AuraManifest\>(manifestUrl);  
+            const manifest \= response.data;
+
+            const indexedData \= {  
+                crawledUrl: baseUrl,  
+                timestamp: new Date().toISOString(),  
+                site: {  
+                    name: manifest.site.name,  
+                    description: manifest.site.description,  
+                },  
+                // Indexing the actions the site offers  
+                capabilities: Object.values(manifest.capabilities).map(cap \=\> ({  
+                    id: cap.id,  
+                    description: cap.description,  
+                    // A real crawler could index parameter schemas for deep linking  
+                    parameters: Object.keys(cap.parameters?.properties || {}),   
+                })),  
+            };
+
+            console.log("\\n--- AURA Site Index \---");  
+            console.log("A crawler has discovered the following structured capabilities:");  
+            console.log(JSON.stringify(indexedData, null, 2));  
+            console.log("-----------------------\\n");  
+            console.log("This structured data allows search engines to understand what a user can \*do\* on a site, not just what they can \*read\*.");
+
+        } catch (error) {  
+            console.error(\`Failed to crawl ${baseUrl}. Is it an AURA-enabled site with a valid manifest?\`);  
+            console.error((error as Error).message);  
+        }  
+    }
+
+    // Main execution flow  
+    const url \= process.argv\[2\];  
+    if (\!url) {  
+        console.error('Usage: npm run crawler \<url\>');  
+        process.exit(1);  
+    }  
+    crawlSiteForCapabilities(url);
+
+### **Step 4: Refine the Core Protocol**
+
+The protocol itself must be pure. AURAEvent is a concept for browser-based agents, which is an *application* of the protocol, not the core standard itself.
+
+* **Sub-task: Simplify the protocol definition.**  
+  * **Action:** Open packages/aura-protocol/src/index.ts.  
+  * **Modification:** Delete the entire AURAEvent interface definition. The protocol should only concern itself with the AuraManifest and AuraState which are universal.  
+  * **Reasoning:** This reinforces that AURA is fundamentally a stateless, HTTP-based protocol. Asynchronous events are an advanced, implementation-specific pattern that can be defined in a separate, future specification (e.g., "AURA-Events for Interactive Agents").
+
+### **Step 5: Write the Manifesto \- The New README.md**
+
+This is the most important written part. It must sell the vision. Replace your entire root README.md with the following.
+
+* **Action:** rm README.md && touch README.md
+
+* ## **Content:**   **\# AURA: The Protocol for a Machine-Readable Web**    **\*\*AURA (Agent-Usable Resource Assertion)\*\* is an open protocol for making websites understandable and operable by AI agents. It proposes a new standard for AI-web interaction that moves beyond fragile screen scraping and DOM manipulation towards a robust, secure, and efficient machine-readable layer for the internet.**    **The web was built for human eyes. AURA is a specification for giving it a machine-readable "API".**    **\[\!\[NPM Version\](https://img.shields.io/npm/v/@aura/protocol.svg)\](https://www.npmjs.com/package/@aura/protocol)**   **\[\!\[License\](https://img.shields.io/badge/license-MIT-blue.svg)\](LICENSE)**    **\---**    **\#\# The Vision: Why AURA?**    **Current AI agents interact with websites in a brittle and inefficient way:**   **1\.  \*\*Screen Scraping:\*\* They "look" at pixels and guess where to click. This is slow, expensive, and breaks with the slightest UI change.**   **2\.  \*\*DOM Manipulation:\*\* They parse complex HTML structures, which are inconsistent across sites and change frequently.**   **3\.  \*\*Insecurity:\*\* Website owners have no control over what an agent might do. An agent could accidentally or maliciously perform dangerous actions.**    **AURA solves this by allowing websites to \*\*declare their capabilities\*\* in a simple, standardized \`aura.json\` manifest file.**    **Instead of an agent guessing how to "create a post," the website explicitly states:**   **\> \*"I have a capability named \`create\_post\`. It's an \`HTTP POST\` to \`/api/posts\` and requires \`title\` and \`content\` parameters."\***    **This is a fundamental paradigm shift from \*imperative guessing\* to \*declarative interaction\*.**    **\#\# Core Concepts**    **\* \*\*Manifest (\`aura.json\`):\*\* A file served at \`/.well-known/aura.json\` that acts as a site's "API documentation" for AI agents. It defines all available resources and capabilities.**   **\* \*\*Capability:\*\* A single, discrete action an agent can perform (e.g., \`list\_posts\`, \`login\`, \`update\_profile\`). Each capability maps to a specific HTTP request.**   **\* \*\*State (\`AURA-State\` Header):\*\* A dynamic HTTP header sent by the server with each response, informing the agent about the current context (e.g., is the user authenticated?) and which capabilities are currently available to them.**    **\#\# This Repository**    **This repository is the \*\*canonical specification for the AURA protocol\*\*. It provides the core building blocks for the AURA ecosystem:**    **\* \*\*\`packages/protocol\`\*\*: The core \`@aura/protocol\` NPM package, containing TypeScript interfaces and the official JSON Schema for validation. \*\*This is the heart of AURA.\*\***   **\* \*\*\`packages/reference-server\`\*\*: A reference implementation of an AURA-enabled server built with Next.js. Use this to understand how to make your own website AURA-compliant.**   **\* \*\*\`packages/reference-client\`\*\*: A minimal, backend-only reference client demonstrating two powerful ways to consume the protocol, without any browser or extension required.**    **\#\# Getting Started: A 5-Minute Demonstration**    **See the protocol in action.**    **\#\#\# 1\. Run the Reference Server**    **The server is a sample website that "speaks" AURA.**    **\`\`\`bash**   **\# Navigate to the server directory**   **cd packages/reference-server**    **\# Install dependencies**   **npm install**    **\# Run the server (usually on http://localhost:3000)**   **npm run dev**    **You can now visit [http://localhost:3000/.well-known/aura.json](https://www.google.com/search?q=http://localhost:3000/.well-known/aura.json) in your browser to see the manifest.**   **2\. Run the Reference Agent**   **This simple agent uses an LLM to understand a prompt and execute a capability on the server.**   **\# (In a new terminal) Navigate to the client directory**   **cd packages/reference-client**    **\# Install dependencies**   **npm install**    **\# Set your OpenAI API Key**   **export OPENAI\_API\_KEY="sk-..."**    **\# Run the agent with a URL and a prompt**   **npm run agent \-- http://localhost:3000 "list all the blog posts"**    **Observe how the agent fetches the manifest, plans its action, and executes the list\_posts capability directly.**   **3\. Run the Crawler (The Big Vision)**   **This script demonstrates how a search engine could index an AURA-enabled site, understanding its functions, not just its content.**   **\# In the client directory**   **npm run crawler \-- http://localhost:3000**    **The output shows a structured JSON object representing the site's capabilities. This is the future of search: indexing actions, not just pages.**   **The Future is a Collaborative Ecosystem**   **This repository defines the standard. The true power of AURA will be realized when a community builds on top of it. We envision a future with:**
+
+  * **Adapters** for all major web frameworks (Express, Laravel, Django, Ruby on Rails).  
+  * **Clients** in every major language (Python, Go, Rust, Java).  
+  * **Intelligent Applications** like browser extensions, search engines, and autonomous agents that leverage this new, structured layer of the web.
+
+AURA is a public good. Fork it, build with it, and help us create a more intelligent and interoperable web.
+
+You have now completed the transformation. Your repository is lean, powerful, and communicates a clear, ambitious, and universal vision. It is no longer a single application, but the blueprint for a new web.

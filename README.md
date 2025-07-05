@@ -1,87 +1,101 @@
-# AURA (Agent-Usable Resource Assertion) Project
+# AURA: The Protocol for a Machine-Readable Web
 
-AURA is a monorepo containing the full ecosystem for a new web protocol designed to make websites machine-navigable. It enables a website to declare its capabilities in a structured format, allowing AI agents to interact with it reliably and securely.
+**AURA (Agent-Usable Resource Assertion)** is an open protocol for making websites understandable and operable by AI agents. It proposes a new standard for AI-web interaction that moves beyond fragile screen scraping and DOM manipulation towards a robust, secure, and efficient machine-readable layer for the internet.
 
-## 🚀 Core Philosophy
+The web was built for human eyes. AURA is a specification for giving it a machine-readable "API".
 
-The web was built for humans. AURA is the bridge to make it ready for agents. Instead of relying on brittle web scraping and screen-reading, AURA allows websites to provide a "semantic API" for their interactive components.
+[![NPM Version](https://img.shields.io/npm/v/@aura/protocol.svg)](https://www.npmjs.com/package/@aura/protocol)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 📦 Packages
+---
 
-This monorepo is managed with `pnpm` and contains the following packages:
+## The Vision: Why AURA?
 
-| Package | Description |
-| --- | --- |
-| **`@aura/protocol`** | Defines the core TypeScript interfaces for the AURA and BEP (Basic Execution Protocol) standards. |
-| **`@aura/lighthouse-app`** | A Next.js reference application that implements and serves an AURA assertion. This is the "AURA-enabled" website. |
-| **`@aura/ai-core-cli`** | A Node.js CLI that acts as the "brain". It fetches a site's AURA assertion, uses an LLM to translate a user's prompt into a BEP command, and sends it to the browser extension. |
-| **`@aura/adapter`** | A browser extension that detects AURA-enabled sites, listens for commands from the AI Core, and executes them on the page. |
+Current AI agents interact with websites in a brittle and inefficient way:
+1. **Screen Scraping:** They "look" at pixels and guess where to click. This is slow, expensive, and breaks with the slightest UI change.
+2. **DOM Manipulation:** They parse complex HTML structures, which are inconsistent across sites and change frequently.
+3. **Insecurity:** Website owners have no control over what an agent might do. An agent could accidentally or maliciously perform dangerous actions.
 
-## 🛠️ How to Run the Ecosystem
+AURA solves this by allowing websites to **declare their capabilities** in a simple, standardized `aura.json` manifest file.
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/installation)
-- An [OpenAI API Key](https://platform.openai.com/api-keys)
+Instead of an agent guessing how to "create a post," the website explicitly states:
+> *"I have a capability named `create_post`. It's an `HTTP POST` to `/api/posts` and requires `title` and `content` parameters."*
 
-### 1. Installation
+This is a fundamental paradigm shift from *imperative guessing* to *declarative interaction*.
 
-Clone the repository and install dependencies from the root directory:
+## Core Concepts
+
+* **Manifest (`aura.json`):** A file served at `/.well-known/aura.json` that acts as a site's "API documentation" for AI agents. It defines all available resources and capabilities.
+* **Capability:** A single, discrete action an agent can perform (e.g., `list_posts`, `login`, `update_profile`). Each capability maps to a specific HTTP request.
+* **State (`AURA-State` Header):** A dynamic HTTP header sent by the server with each response, informing the agent about the current context (e.g., is the user authenticated?) and which capabilities are currently available to them.
+
+## This Repository
+
+This repository is the **canonical specification for the AURA protocol**. It provides the core building blocks for the AURA ecosystem:
+
+* **`packages/aura-protocol`**: The core `@aura/protocol` NPM package, containing TypeScript interfaces and the official JSON Schema for validation. **This is the heart of AURA.**
+* **`packages/reference-server`**: A reference implementation of an AURA-enabled server built with Next.js. Use this to understand how to make your own website AURA-compliant.
+* **`packages/reference-client`**: A minimal, backend-only reference client demonstrating two powerful ways to consume the protocol, without any browser or extension required.
+
+## Getting Started: A 5-Minute Demonstration
+
+See the protocol in action.
+
+### 1. Install Dependencies
+
+From the root of the monorepo, install all necessary dependencies for all packages.
 
 ```bash
-git clone <repository_url>
-cd aura-project
 pnpm install
 ```
 
-### 2. Build Packages
+### 2. Run the Reference Server
 
-Build the protocol and CLI packages:
-
-```bash
-pnpm --filter=@aura/protocol build
-pnpm --filter=@aura/ai-core-cli build
-```
-
-### 3. Run the Lighthouse App (The Website)
-
-In a separate terminal, start the Next.js reference application:
+The server is a sample website that "speaks" AURA.
 
 ```bash
-pnpm --filter=aura-lighthouse-app dev
+# This will start the server (usually on http://localhost:3000)
+pnpm --filter aura-reference-server dev
 ```
-This will start a server at `http://localhost:3000`. You can navigate to `http://localhost:3000/api/aura` to see the AURA assertion JSON.
 
-### 4. Load the Browser Extension
+You can now visit http://localhost:3000/.well-known/aura.json in your browser to see the manifest.
 
-- Open Google Chrome and navigate to `chrome://extensions`.
-- Enable "Developer mode".
-- Click "Load unpacked".
-- Select the `packages/aura-adapter/build/chrome-mv3-dev` directory.
-- The "Aura Adapter" extension should now be visible and active.
+### 3. Run the Reference Agent
 
-### 5. Run the AI Core
+This simple agent uses an LLM to understand a prompt and execute a capability on the server.
 
-The AI Core's WebSocket server must be running to communicate with the extension.
+First, create a `.env` file inside the `packages/reference-client` directory and add your OpenAI API key.
 
-**In a new terminal:**
+```
+OPENAI_API_KEY="sk-..."
+```
+
+Then, run the agent with a URL and a prompt:
 
 ```bash
-# Start the AI core in server mode
-pnpm --filter=@aura/ai-core-cli start -- --server
+# (In a new terminal)
+pnpm --filter aura-reference-client agent -- http://localhost:3000 "list all the blog posts"
 ```
-You should see a message that the server is waiting for the Emissary (the extension) to connect.
 
-### 6. Execute a Command
+Observe how the agent fetches the manifest, plans its action, and executes the list_posts capability directly.
 
-With everything running, open a **new terminal** to send a command.
+### 4. Run the Crawler (The Big Vision)
 
-- Navigate to `http://localhost:3000` in your browser.
-- Click the Aura extension icon; you should see "AURA Detected!".
-- Run the following command, replacing `<YOUR_OPENAI_KEY>` with your key:
+This script demonstrates how a search engine could index an AURA-enabled site, understanding its functions, not just its content.
 
 ```bash
-pnpm --filter=@aura/ai-core-cli start -- -u http://localhost:3000 -p "log me in with email test@example.com and password secure123" -k <YOUR_OPENAI_KEY>
+# In the client directory
+pnpm --filter aura-reference-client crawler -- http://localhost:3000
 ```
 
-Watch as the AI Core generates a command and the browser extension automatically fills and submits the login form on the Lighthouse website. 
+The output shows a structured JSON object representing the site's capabilities. This is the future of search: indexing actions, not just pages.
+
+## The Future is a Collaborative Ecosystem
+
+This repository defines the standard. The true power of AURA will be realized when a community builds on top of it. We envision a future with:
+
+* **Adapters** for all major web frameworks (Express, Laravel, Django, Ruby on Rails).
+* **Clients** in every major language (Python, Go, Rust, Java).
+* **Intelligent Applications** like browser extensions, search engines, and autonomous agents that leverage this new, structured layer of the web.
+
+AURA is a public good. Fork it, build with it, and help us create a more intelligent and interoperable web. 

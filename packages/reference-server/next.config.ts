@@ -47,6 +47,10 @@ const nextConfig: NextConfig = {
             key: 'Access-Control-Expose-Headers',
             value: 'AURA-State, Location, Set-Cookie',
           },
+          {
+            key: 'Vary',
+            value: 'Origin',
+          },
         ],
       },
     ];

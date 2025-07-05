@@ -89,20 +89,6 @@ export interface Policy {
 }
 
 /**
- * AURAEvent - For asynchronous callbacks (replaces BEPCommand)
- * Used for browser events like auth token acquisition or captcha solving
- */
-export interface AURAEvent {
-  protocol: 'AURAEvent';
-  version: '1.0';
-  eventId: string;
-  payload: {
-    type: 'AUTH_TOKEN_ACQUIRED' | 'CAPTCHA_SOLVED' | 'REDIRECT_OCCURRED';
-    data: any;
-  };
-}
-
-/**
  * AuraState - Structure for the AURA-State header
  * Sent as Base64-encoded JSON in HTTP responses
  */
