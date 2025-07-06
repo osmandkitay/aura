@@ -38,8 +38,8 @@ if (!schema) {
 
 // Add additional schema metadata
 schema.$schema = 'http://json-schema.org/draft-07/schema#';
-schema.$id = 'https://aura.dev/schemas/v1.3.json';
-schema.title = 'AURA Manifest v1.3';
+schema.$id = 'https://aura.dev/schemas/v1.0.json';
+schema.title = 'AURA Manifest v1.0';
 schema.description = 'Schema for AURA (Agent-Usable Resource Assertion) manifest files';
 
 // Add common format definitions
@@ -71,13 +71,13 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-const outputPath = path.join(outputDir, 'aura-v1.3.schema.json');
+const outputPath = path.join(outputDir, 'aura-v1.0.schema.json');
 fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));
 
 console.log(`Schema generated successfully at: ${outputPath}`);
 
 // Also generate schemas for other important types
-const additionalTypes = ['Capability', 'Resource', 'HttpAction', 'AURAEvent', 'AuraState'];
+const additionalTypes = ['Capability', 'Resource', 'HttpAction', 'AuraState'];
 
 additionalTypes.forEach(typeName => {
   const typeSchema = generator.getSchemaForSymbol(typeName);

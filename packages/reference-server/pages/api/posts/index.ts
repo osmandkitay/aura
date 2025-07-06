@@ -45,16 +45,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
-      // Validate CSRF token
-      const csrfToken = req.headers['x-csrf-token'];
-      if (!csrfToken) {
-        res.status(403).json({
-          code: 'CSRF_REQUIRED',
-          detail: 'CSRF token required',
-          hint: 'Include X-CSRF-Token header',
-        });
-        return;
-      }
+
 
       // Create new post
       const { title, content, tags: newTags = [], published = false } = req.body;

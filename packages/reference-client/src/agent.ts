@@ -1,8 +1,17 @@
 // packages/reference-client/src/agent.ts
 import 'dotenv/config';
 import axios from 'axios';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
 import OpenAI from 'openai';
 import { AuraManifest, AuraState } from '@aura/protocol';
+
+// Enable cookie support
+const cookieJar = new CookieJar();
+const client = wrapper(axios.create({
+  jar: cookieJar,
+  withCredentials: true,
+}));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -12,7 +21,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 async function fetchManifest(baseUrl: string): Promise<AuraManifest> {
     const manifestUrl = `${baseUrl}/.well-known/aura.json`;
     console.log(`[1/3] Fetching AURA manifest from ${manifestUrl}...`);
-    const response = await axios.get<AuraManifest>(manifestUrl);
+    const response = await client.get<AuraManifest>(manifestUrl);
     console.log(`[1/3] Success. Site: ${response.data.site.name}`);
     return response.data;
 }
@@ -64,10 +73,20 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
     const capability = manifest.capabilities[capabilityId];
     if (!capability) throw new Error(`Capability ${capabilityId} not found.`);
 
-    // Note: This is a simplified HTTP builder. A real library would handle URL templating more robustly.
-    const url = `${baseUrl}${capability.action.urlTemplate.split('{')[0]}`;
+    // Simple URL templating - replace {param} with actual values
+    let url = `${baseUrl}${capability.action.urlTemplate}`;
+    
+    // Replace path parameters
+    if (capability.action.parameterMapping) {
+        Object.entries(capability.action.parameterMapping).forEach(([paramKey, jsonPointer]) => {
+            const paramValue = args[paramKey];
+            if (paramValue !== undefined) {
+                url = url.replace(`{${paramKey}}`, encodeURIComponent(paramValue));
+            }
+        });
+    }
 
-    const response = await axios({
+    const response = await client({
         method: capability.action.method,
         url: url,
         data: (capability.action.method !== 'GET' && capability.action.method !== 'DELETE') ? args : null,

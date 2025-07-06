@@ -44,15 +44,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
     case 'PUT':
       // Update profile
-      const csrfToken = req.headers['x-csrf-token'];
-      if (!csrfToken) {
-        res.status(403).json({
-          code: 'CSRF_REQUIRED',
-          detail: 'CSRF token required',
-          hint: 'Include X-CSRF-Token header',
-        });
-        return;
-      }
 
       const { name, bio, avatar } = req.body;
       

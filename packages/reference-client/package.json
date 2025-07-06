@@ -9,10 +9,14 @@
   "dependencies": {
     "@aura/protocol": "workspace:*",
     "axios": "^1.7.2",
-    "commander": "^12.1.0",
+    "axios-cookiejar-support": "^6.0.3",
     "dotenv": "^16.4.5",
     "openai": "^4.52.0",
+    "tough-cookie": "^5.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "@types/tough-cookie": "^4.0.5"
   }
-} 
+}

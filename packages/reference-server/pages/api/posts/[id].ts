@@ -35,16 +35,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
-      // Validate CSRF token
-      const csrfToken = req.headers['x-csrf-token'];
-      if (!csrfToken) {
-        res.status(403).json({
-          code: 'CSRF_REQUIRED',
-          detail: 'CSRF token required',
-          hint: 'Include X-CSRF-Token header',
-        });
-        return;
-      }
+
 
       // Update post
       const { title, content, tags, published } = req.body;
@@ -74,16 +65,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
-      // Validate CSRF token
-      const deleteCsrfToken = req.headers['x-csrf-token'];
-      if (!deleteCsrfToken) {
-        res.status(403).json({
-          code: 'CSRF_REQUIRED',
-          detail: 'CSRF token required',
-          hint: 'Include X-CSRF-Token header',
-        });
-        return;
-      }
+
 
       // Delete post
       posts.splice(postIndex, 1);

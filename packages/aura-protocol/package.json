@@ -15,9 +15,11 @@
     "@types/json-schema": "^7.0.15",
     "ajv": "^8.17.1",
     "axios": "^1.10.0",
-    "chalk": "^4.1.2",
-    "commander": "^14.0.0",
     "ts-node": "^10.9.2",
     "typescript-json-schema": "^0.65.1"
+  },
+  "dependencies": {
+    "citty": "^0.1.6",
+    "kleur": "^4.1.5"
   }
 }

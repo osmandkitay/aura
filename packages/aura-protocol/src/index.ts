@@ -1,6 +1,6 @@
 /**
- * AURA Protocol v1.3 - Production-Ready Protocol
- * A robust, scalable, and efficient protocol for agent-website interactions
+ * AURA Protocol v1.0 - Initial Release
+ * A protocol for agent-website interactions
  */
 
 /**
@@ -8,10 +8,10 @@
  * Replaces the old AuraAssertion concept
  */
 export interface AuraManifest {
-  $schema: string; // e.g., "https://aura.dev/schemas/v1.3.json"
+  $schema: string; // e.g., "https://aura.dev/schemas/v1.0.json"
   id?: string; // Canonical, absolute URL for the manifest
   protocol: 'AURA';
-  version: '1.3';
+  version: '1.0';
   site: {
     name: string;
     description?: string;
@@ -62,14 +62,9 @@ export interface HttpAction {
   // Hint for browser-based agents to avoid CORS issues
   cors?: boolean;
   // Defines how parameters are sent
-  encoding?: 'json' | 'form-data' | 'multipart' | 'query';
+  encoding?: 'json' | 'query';
   // Maps capability parameters to the HTTP request using JSON-Pointer syntax
   parameterMapping: Record<string, string>;
-  // Security policy for this specific action
-  security?: {
-    // Defines CSRF token handling. Can be a static header or a dynamic fetch endpoint.
-    csrf?: 'none' | 'header:X-CSRF-TOKEN' | `fetch:${string}`; // e.g., "fetch:/api/csrf-token"
-  };
 }
 
 /**
@@ -83,9 +78,7 @@ export interface Policy {
     window: 'second' | 'minute' | 'hour' | 'day';
   };
   // Provides a hint to the agent about authentication
-  authHint?: 'none' | 'cookie' | 'bearer' | 'oauth2' | '401_challenge';
-  // Cookie names that are important for authentication
-  cookieNames?: string[];
+  authHint?: 'none' | 'cookie' | 'bearer';
 }
 
 /**

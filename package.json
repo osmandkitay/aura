@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.7.1",
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@vitest/coverage-istanbul": "^3.2.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

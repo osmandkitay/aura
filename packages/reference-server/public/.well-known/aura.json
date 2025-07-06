@@ -1,8 +1,8 @@
 {
-  "$schema": "https://aura.dev/schemas/v1.3.json",
+  "$schema": "https://aura.dev/schemas/v1.0.json",
   "id": "https://aura-lighthouse.example.com/.well-known/aura.json",
   "protocol": "AURA",
-  "version": "1.3",
+  "version": "1.0",
   "site": {
     "name": "AURA Lighthouse Demo",
     "description": "A demonstration site for AURA protocol capabilities",
@@ -122,9 +122,6 @@
           "content": "/content",
           "tags": "/tags",
           "published": "/published"
-        },
-        "security": {
-          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     },
@@ -196,9 +193,6 @@
           "content": "/content",
           "tags": "/tags",
           "published": "/published"
-        },
-        "security": {
-          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     },
@@ -223,9 +217,6 @@
         "cors": true,
         "parameterMapping": {
           "id": "/id"
-        },
-        "security": {
-          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     },
@@ -256,9 +247,6 @@
         "parameterMapping": {
           "email": "/email",
           "password": "/password"
-        },
-        "security": {
-          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     },
@@ -304,9 +292,6 @@
           "name": "/name",
           "bio": "/bio",
           "avatar": "/avatar"
-        },
-        "security": {
-          "csrf": "header:X-CSRF-TOKEN"
         }
       }
     }

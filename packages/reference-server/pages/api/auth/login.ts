@@ -1,17 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serialize } from 'cookie';
+import * as bcrypt from 'bcryptjs';
 
-// Mock user database
+// Mock user database with hashed passwords
 const users = [
   {
     id: '1',
     email: 'demo@aura.dev',
-    password: 'password123', // In production, this would be hashed
+    passwordHash: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password123
     name: 'Demo User',
   },
 ];
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     res.status(405).json({
@@ -32,10 +33,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  // Find user
-  const user = users.find(u => u.email === email && u.password === password);
+  // Find user by email
+  const user = users.find(u => u.email === email);
 
   if (!user) {
+    res.status(401).json({
+      code: 'INVALID_CREDENTIALS',
+      detail: 'Invalid email or password',
+    });
+    return;
+  }
+
+  // Verify password
+  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+  if (!isValidPassword) {
     res.status(401).json({
       code: 'INVALID_CREDENTIALS',
       detail: 'Invalid email or password',

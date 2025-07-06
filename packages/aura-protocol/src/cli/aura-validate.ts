@@ -2,60 +2,118 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { Command } from 'commander';
+import { defineCommand, runMain } from 'citty';
 import * as Ajv from 'ajv';
-import chalk from 'chalk';
+import { red, green, blue, cyan, yellow, gray } from 'kleur';
 import axios from 'axios';
 
-const program = new Command();
+interface ValidationResult {
+  valid: boolean;
+  errors?: any[];
+  manifest?: any;
+  source?: string;
+  warnings?: string[];
+}
 
-program
-  .name('aura-validate')
-  .description('Validate AURA manifest files against the official schema')
-  .version('1.3.0')
-  .argument('[file]', 'Path to the manifest file (default: .well-known/aura.json)')
-  .option('-u, --url <url>', 'Validate manifest from URL')
-  .option('-s, --schema <path>', 'Path to custom schema file')
-  .option('-v, --verbose', 'Show detailed validation output')
-  .action(async (file: string | undefined, options: any) => {
+const main = defineCommand({
+  meta: {
+    name: 'aura-validate',
+    description: 'Validate AURA manifest files against the official schema',
+    version: '1.0.0',
+  },
+  args: {
+    file: {
+      type: 'positional',
+      description: 'Path to the manifest file (default: .well-known/aura.json)',
+      required: false,
+    },
+    url: {
+      type: 'string',
+      description: 'Validate manifest from URL',
+      alias: 'u',
+    },
+    schema: {
+      type: 'string',
+      description: 'Path to custom schema file',
+      alias: 's',
+    },
+    verbose: {
+      type: 'boolean',
+      description: 'Show detailed validation output',
+      alias: 'v',
+    },
+    json: {
+      type: 'boolean',
+      description: 'Output machine-readable JSON',
+      alias: 'j',
+    },
+  },
+  async run({ args }) {
+    const result: ValidationResult = {
+      valid: false,
+      warnings: [],
+    };
+
     try {
       // Determine manifest source
       let manifestData: any;
       let manifestSource: string;
 
-      if (options.url) {
+      if (args.url) {
         // Fetch from URL
-        console.log(chalk.blue(`Fetching manifest from ${options.url}...`));
-        const response = await axios.get(options.url);
+        if (!args.json) {
+          console.log(blue(`Fetching manifest from ${args.url}...`));
+        }
+        const response = await axios.get(args.url);
         manifestData = response.data;
-        manifestSource = options.url;
+        manifestSource = args.url;
       } else {
         // Read from file
-        const manifestPath = file || path.join(process.cwd(), '.well-known', 'aura.json');
+        const manifestPath = args.file || path.join(process.cwd(), '.well-known', 'aura.json');
         if (!fs.existsSync(manifestPath)) {
-          console.error(chalk.red(`Manifest file not found: ${manifestPath}`));
+          const error = `Manifest file not found: ${manifestPath}`;
+          if (args.json) {
+            console.log(JSON.stringify({ valid: false, error }, null, 2));
+          } else {
+            console.error(red(error));
+          }
           process.exit(1);
         }
         manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
         manifestSource = manifestPath;
       }
 
-      console.log(chalk.blue(`Validating manifest from: ${manifestSource}`));
+      result.manifest = manifestData;
+      result.source = manifestSource;
+
+      if (!args.json) {
+        console.log(blue(`Validating manifest from: ${manifestSource}`));
+      }
 
       // Load schema
       let schema: any;
-      if (options.schema) {
+      if (args.schema) {
         // Custom schema
-        if (!fs.existsSync(options.schema)) {
-          console.error(chalk.red(`Schema file not found: ${options.schema}`));
+        if (!fs.existsSync(args.schema)) {
+          const error = `Schema file not found: ${args.schema}`;
+          if (args.json) {
+            console.log(JSON.stringify({ valid: false, error }, null, 2));
+          } else {
+            console.error(red(error));
+          }
           process.exit(1);
         }
-        schema = JSON.parse(fs.readFileSync(options.schema, 'utf-8'));
+        schema = JSON.parse(fs.readFileSync(args.schema, 'utf-8'));
       } else {
         // Default schema from dist
-        const schemaPath = path.join(__dirname, '../../dist/aura-v1.3.schema.json');
+        const schemaPath = path.join(__dirname, '../../dist/aura-v1.0.schema.json');
         if (!fs.existsSync(schemaPath)) {
-          console.error(chalk.red('Default schema not found. Run "npm run build" first.'));
+          const error = 'Default schema not found. Run "npm run build" first.';
+          if (args.json) {
+            console.log(JSON.stringify({ valid: false, error }, null, 2));
+          } else {
+            console.error(red(error));
+          }
           process.exit(1);
         }
         schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
@@ -64,46 +122,54 @@ program
       // Validate
       const ajv = new Ajv.default({ 
         allErrors: true, 
-        verbose: options.verbose,
+        verbose: args.verbose,
         strict: false // Allow additional keywords from TypeScript JSON Schema
       });
       const validate = ajv.compile(schema);
       const valid = validate(manifestData);
 
+      result.valid = valid;
+
       if (valid) {
-        console.log(chalk.green('✓ Manifest is valid!'));
+        if (!args.json) {
+          console.log(green('✓ Manifest is valid!'));
 
-        // Show summary
-        console.log(chalk.cyan('\nManifest Summary:'));
-        console.log(`  Protocol: ${manifestData.protocol} v${manifestData.version}`);
-        console.log(`  Site: ${manifestData.site.name}`);
-        console.log(`  Resources: ${Object.keys(manifestData.resources || {}).length}`);
-        console.log(`  Capabilities: ${Object.keys(manifestData.capabilities || {}).length}`);
+          // Show summary
+          console.log(cyan('\nManifest Summary:'));
+          console.log(`  Protocol: ${manifestData.protocol} v${manifestData.version}`);
+          console.log(`  Site: ${manifestData.site.name}`);
+          console.log(`  Resources: ${Object.keys(manifestData.resources || {}).length}`);
+          console.log(`  Capabilities: ${Object.keys(manifestData.capabilities || {}).length}`);
 
-        if (options.verbose) {
-          console.log(chalk.cyan('\nCapabilities:'));
-          Object.entries(manifestData.capabilities || {}).forEach(([id, cap]: [string, any]) => {
-            console.log(`  - ${id}: ${cap.description}`);
-          });
+          if (args.verbose) {
+            console.log(cyan('\nCapabilities:'));
+            Object.entries(manifestData.capabilities || {}).forEach(([id, cap]: [string, any]) => {
+              console.log(`  - ${id}: ${cap.description}`);
+            });
+          }
         }
       } else {
-        console.log(chalk.red('✗ Manifest is invalid!'));
-        console.log(chalk.red('\nValidation errors:'));
+        result.errors = validate.errors;
         
-        validate.errors?.forEach((error) => {
-          const instancePath = error.instancePath || '/';
-          console.log(chalk.red(`  ${instancePath}: ${error.message}`));
-          if (error.params && options.verbose) {
-            console.log(chalk.gray(`    Details: ${JSON.stringify(error.params)}`));
-          }
-        });
-
-        process.exit(1);
+        if (!args.json) {
+          console.log(red('✗ Manifest is invalid!'));
+          console.log(red('\nValidation errors:'));
+          
+          validate.errors?.forEach((error) => {
+            const instancePath = error.instancePath || '/';
+            console.log(red(`  ${instancePath}: ${error.message}`));
+            if (error.params && args.verbose) {
+              console.log(gray(`    Details: ${JSON.stringify(error.params)}`));
+            }
+          });
+        }
       }
 
       // Additional checks
       if (manifestData.capabilities) {
-        console.log(chalk.cyan('\nPerforming additional checks...'));
+        if (!args.json) {
+          console.log(cyan('\nPerforming additional checks...'));
+        }
         
         // Check for referenced capabilities in resources
         const referencedCapabilities = new Set<string>();
@@ -122,7 +188,11 @@ program
         );
         
         if (unreferenced.length > 0) {
-          console.log(chalk.yellow(`  ⚠ Unreferenced capabilities: ${unreferenced.join(', ')}`));
+          const warning = `Unreferenced capabilities: ${unreferenced.join(', ')}`;
+          result.warnings?.push(warning);
+          if (!args.json) {
+            console.log(yellow(`  ⚠ ${warning}`));
+          }
         }
 
         // Check for undefined capability references
@@ -131,15 +201,37 @@ program
         );
         
         if (undefined.length > 0) {
-          console.log(chalk.red(`  ✗ Undefined capability references: ${undefined.join(', ')}`));
+          const error = `Undefined capability references: ${undefined.join(', ')}`;
+          result.errors = result.errors || [];
+          result.errors.push({ message: error });
+          result.valid = false;
+          
+          if (!args.json) {
+            console.log(red(`  ✗ ${error}`));
+          }
         }
       }
 
-      console.log(chalk.green('\n✓ All checks passed!'));
+      if (args.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        if (result.valid) {
+          console.log(green('\n✓ All checks passed!'));
+        }
+      }
+
+      if (!result.valid) {
+        process.exit(1);
+      }
     } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      if (args.json) {
+        console.log(JSON.stringify({ valid: false, error: error.message }, null, 2));
+      } else {
+        console.error(red(`Error: ${error.message}`));
+      }
       process.exit(1);
     }
-  });
+  },
+});
 
-program.parse(process.argv); 
+runMain(main); 
