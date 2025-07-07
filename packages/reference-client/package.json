@@ -2,9 +2,11 @@
   "name": "aura-reference-client",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "agent": "ts-node src/agent.ts",
-    "crawler": "ts-node src/crawler.ts"
+    "build": "tsc --noEmit",
+    "agent": "tsx src/agent.ts",
+    "crawler": "tsx src/crawler.ts"
   },
   "dependencies": {
     "@aura/protocol": "workspace:*",
@@ -17,6 +19,7 @@
     "typescript": "^5.4.5"
   },
   "devDependencies": {
-    "@types/tough-cookie": "^4.0.5"
+    "@types/tough-cookie": "^4.0.5",
+    "tsx": "^4.20.3"
   }
 }

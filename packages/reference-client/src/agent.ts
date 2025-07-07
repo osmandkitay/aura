@@ -66,6 +66,54 @@ async function planAction(manifest: AuraManifest, prompt: string, state?: AuraSt
 }
 
 /**
+ * Simple URI template expansion for AURA protocol
+ */
+function expandUriTemplate(template: string, args: any): { url: string; queryParams: any } {
+    let url = template;
+    let queryParams: any = {};
+
+    // Handle query parameter templates like {?param1,param2,param3*}
+    const queryMatch = url.match(/\{\?([^}]+)\}/);
+    if (queryMatch) {
+        const queryParamSpec = queryMatch[1];
+        const paramNames = queryParamSpec.split(',');
+        
+        // Remove the query template from URL
+        url = url.replace(/\{\?[^}]+\}/, '');
+        
+        // Process each parameter
+        paramNames.forEach(paramName => {
+            const isExploded = paramName.endsWith('*');
+            const cleanParamName = isExploded ? paramName.slice(0, -1) : paramName;
+            
+            if (args[cleanParamName] !== undefined) {
+                if (isExploded && Array.isArray(args[cleanParamName])) {
+                    // For exploded arrays, add each item as a separate parameter
+                    args[cleanParamName].forEach((item: any) => {
+                        if (!queryParams[cleanParamName]) {
+                            queryParams[cleanParamName] = [];
+                        }
+                        queryParams[cleanParamName].push(item);
+                    });
+                } else {
+                    queryParams[cleanParamName] = args[cleanParamName];
+                }
+            }
+        });
+    }
+
+    // Handle path parameters like {id}
+    Object.keys(args).forEach(paramKey => {
+        const paramValue = args[paramKey];
+        if (paramValue !== undefined) {
+            url = url.replace(`{${paramKey}}`, encodeURIComponent(paramValue));
+        }
+    });
+
+    return { url, queryParams };
+}
+
+/**
  * Executes the chosen capability via a direct HTTP request.
  */
 async function executeAction(baseUrl: string, manifest: AuraManifest, capabilityId: string, args: any): Promise<{ status: number; data: any; state: AuraState | null; }> {
@@ -73,24 +121,17 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
     const capability = manifest.capabilities[capabilityId];
     if (!capability) throw new Error(`Capability ${capabilityId} not found.`);
 
-    // Simple URL templating - replace {param} with actual values
-    let url = `${baseUrl}${capability.action.urlTemplate}`;
-    
-    // Replace path parameters
-    if (capability.action.parameterMapping) {
-        Object.entries(capability.action.parameterMapping).forEach(([paramKey, jsonPointer]) => {
-            const paramValue = args[paramKey];
-            if (paramValue !== undefined) {
-                url = url.replace(`{${paramKey}}`, encodeURIComponent(paramValue));
-            }
-        });
-    }
+    // Expand URI template properly
+    const { url: templateUrl, queryParams } = expandUriTemplate(capability.action.urlTemplate, args);
+    const fullUrl = `${baseUrl}${templateUrl}`;
+
+    console.log(`[3/3] Expanded URL: ${fullUrl}`, queryParams ? `with params: ${JSON.stringify(queryParams)}` : '');
 
     const response = await client({
         method: capability.action.method,
-        url: url,
+        url: fullUrl,
         data: (capability.action.method !== 'GET' && capability.action.method !== 'DELETE') ? args : null,
-        params: (capability.action.method === 'GET' || capability.action.method === 'DELETE') ? args : null,
+        params: (capability.action.method === 'GET' || capability.action.method === 'DELETE') ? queryParams : null,
         validateStatus: () => true, // Accept all status codes
     });
 
