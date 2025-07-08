@@ -106,26 +106,22 @@ describe('AURA Agent Core Functions', () => {
   describe('expandUriTemplate', () => {
     it('should expand simple path parameters', () => {
       const result = expandUriTemplate('/api/posts/{id}', { id: '123' });
-      expect(result.url).toBe('/api/posts/123');
-      expect(result.queryParams).toEqual({});
+      expect(result).toBe('/api/posts/123');
     });
 
-    it('should expand query parameters', () => {
+    it('should remove query parameter templates from URL', () => {
       const result = expandUriTemplate('/api/posts{?limit,offset}', { limit: 10, offset: 0 });
-      expect(result.url).toBe('/api/posts');
-      expect(result.queryParams).toEqual({ limit: 10, offset: 0 });
+      expect(result).toBe('/api/posts');
     });
 
-    it('should handle exploded array parameters', () => {
+    it('should handle exploded array parameter templates', () => {
       const result = expandUriTemplate('/api/posts{?tags*}', { tags: ['tech', 'ai'] });
-      expect(result.url).toBe('/api/posts');
-      expect(result.queryParams).toEqual({ tags: ['tech', 'ai'] });
+      expect(result).toBe('/api/posts');
     });
 
     it('should handle mixed path and query parameters', () => {
       const result = expandUriTemplate('/api/posts/{id}{?include}', { id: '123', include: 'comments' });
-      expect(result.url).toBe('/api/posts/123');
-      expect(result.queryParams).toEqual({ include: 'comments' });
+      expect(result).toBe('/api/posts/123');
     });
   });
 });

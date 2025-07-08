@@ -116,6 +116,21 @@ if (schema.definitions) {
   }
 }
 
+// Remove non-standard keywords to ensure schema portability
+function purgeDefaultProps(obj: any) {
+  if (typeof obj !== 'object' || obj === null) return;
+  
+  delete obj.defaultProperties;
+  
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      purgeDefaultProps(obj[key]);
+    }
+  }
+}
+
+purgeDefaultProps(schema);
+
 const outputPath = path.join(outputDir, 'aura-v1.0.schema.json');
 fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));
 
@@ -127,6 +142,9 @@ const additionalTypes = ['Capability', 'Resource', 'HttpAction', 'AuraState'];
 additionalTypes.forEach(typeName => {
   const typeSchema = generator.getSchemaForSymbol(typeName);
   if (typeSchema) {
+    // Clean up non-standard properties for additional schemas too
+    purgeDefaultProps(typeSchema);
+    
     const typeOutputPath = path.join(outputDir, `${typeName.toLowerCase()}.schema.json`);
     fs.writeFileSync(typeOutputPath, JSON.stringify(typeSchema, null, 2));
     console.log(`Schema for ${typeName} generated at: ${typeOutputPath}`);

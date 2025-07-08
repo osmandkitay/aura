@@ -151,41 +151,14 @@ async function analyzePromptComplexity(prompt: string): Promise<string[]> {
 }
 
 /**
- * Simple URI template expansion for AURA protocol
+ * Simple URI template expansion for AURA protocol - handles only path parameters
  */
-export function expandUriTemplate(template: string, args: any): { url: string; queryParams: any } {
+export function expandUriTemplate(template: string, args: any): string {
     let url = template;
-    let queryParams: any = {};
 
-    // Handle query parameter templates like {?param1,param2,param3*}
-    const queryMatch = url.match(/\{\?([^}]+)\}/);
-    if (queryMatch) {
-        const queryParamSpec = queryMatch[1];
-        const paramNames = queryParamSpec.split(',');
-        
-        // Remove the query template from URL
-        url = url.replace(/\{\?[^}]+\}/, '');
-        
-        // Process each parameter
-        paramNames.forEach(paramName => {
-            const isExploded = paramName.endsWith('*');
-            const cleanParamName = isExploded ? paramName.slice(0, -1) : paramName;
-            
-            if (args[cleanParamName] !== undefined) {
-                if (isExploded && Array.isArray(args[cleanParamName])) {
-                    // For exploded arrays, add each item as a separate parameter
-                    args[cleanParamName].forEach((item: any) => {
-                        if (!queryParams[cleanParamName]) {
-                            queryParams[cleanParamName] = [];
-                        }
-                        queryParams[cleanParamName].push(item);
-                    });
-                } else {
-                    queryParams[cleanParamName] = args[cleanParamName];
-                }
-            }
-        });
-    }
+    // Remove any query parameter templates from the URL template
+    // (these will be handled by executeAction based on encoding/parameterMapping)
+    url = url.replace(/\{\?[^}]+\}/, '');
 
     // Handle path parameters like {id}
     Object.keys(args).forEach(paramKey => {
@@ -195,28 +168,83 @@ export function expandUriTemplate(template: string, args: any): { url: string; q
         }
     });
 
-    return { url, queryParams };
+    return url;
+}
+
+/**
+ * Maps arguments according to the capability's parameterMapping.
+ * Uses JSON Pointer syntax (e.g., "/email" maps to args.email).
+ */
+function mapParameters(args: any, parameterMapping: Record<string, string>): any {
+    const mapped: any = {};
+    
+    for (const [paramName, jsonPointer] of Object.entries(parameterMapping)) {
+        // Simple JSON Pointer implementation for basic cases like "/email", "/title", etc.
+        if (jsonPointer.startsWith('/')) {
+            const key = jsonPointer.slice(1); // Remove leading "/"
+            if (args[key] !== undefined) {
+                mapped[paramName] = args[key];
+            }
+        }
+    }
+    
+    return mapped;
 }
 
 /**
  * Executes the chosen capability via a direct HTTP request.
+ * Honors the capability's encoding and parameterMapping properties.
  */
 async function executeAction(baseUrl: string, manifest: AuraManifest, capabilityId: string, args: any, stepNumber: number, totalSteps: number): Promise<{ status: number; data: any; state: AuraState | null; }> {
     console.log(`[${stepNumber}/${totalSteps}] Executing capability "${capabilityId}"...`);
     const capability = manifest.capabilities[capabilityId];
     if (!capability) throw new Error(`Capability ${capabilityId} not found.`);
 
-    // Expand URI template properly
-    const { url: templateUrl, queryParams } = expandUriTemplate(capability.action.urlTemplate, args);
+    // Expand URI template for path parameters only
+    const templateUrl = expandUriTemplate(capability.action.urlTemplate, args);
     const fullUrl = `${baseUrl}${templateUrl}`;
 
-    console.log(`[${stepNumber}/${totalSteps}] Expanded URL: ${fullUrl}`, queryParams ? `with params: ${JSON.stringify(queryParams)}` : '');
+    // Determine request data and params based on encoding and parameterMapping
+    let requestData: any = null;
+    let queryParams: any = null;
+
+    if (capability.action.parameterMapping) {
+        // Use parameterMapping to map args to the request
+        const mappedParams = mapParameters(args, capability.action.parameterMapping);
+        
+        // Determine where to put the mapped parameters based on encoding
+        if (capability.action.encoding === 'json') {
+            // Send parameters in request body as JSON
+            requestData = mappedParams;
+        } else if (capability.action.encoding === 'query') {
+            // Send parameters as query string
+            queryParams = mappedParams;
+        } else {
+            // Fallback to method-based logic for capabilities without explicit encoding
+            if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
+                queryParams = mappedParams;
+            } else {
+                requestData = mappedParams;
+            }
+        }
+    } else {
+        // Fallback for capabilities without parameterMapping (use raw args)
+        if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
+            queryParams = args;
+        } else {
+            requestData = args;
+        }
+    }
+
+    const paramsInfo = queryParams ? `with query params: ${JSON.stringify(queryParams)}` : '';
+    const dataInfo = requestData ? `with body data: ${JSON.stringify(requestData)}` : '';
+    console.log(`[${stepNumber}/${totalSteps}] Expanded URL: ${fullUrl} ${paramsInfo} ${dataInfo}`);
 
     const response = await client({
         method: capability.action.method,
         url: fullUrl,
-        data: (capability.action.method !== 'GET' && capability.action.method !== 'DELETE') ? args : null,
-        params: (capability.action.method === 'GET' || capability.action.method === 'DELETE') ? queryParams : null,
+        data: requestData,
+        params: queryParams,
         validateStatus: () => true, // Accept all status codes
     });
 
