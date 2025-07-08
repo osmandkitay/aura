@@ -7,7 +7,7 @@ const users = [
   {
     id: '1',
     email: 'demo@aura.dev',
-    passwordHash: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password123
+    passwordHash: '$2b$10$4zvfucLaYLNvKLmRPIoeYujmZPl2alhPupBBlLOW4B0sdpfu9IGUm', // password123
     name: 'Demo User',
   },
 ];
@@ -67,6 +67,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   res.setHeader('Set-Cookie', cookie);
+  
+  // Set correct AURA-State header for authenticated user
+  const auraState = {
+    isAuthenticated: true,
+    context: {
+      path: '/api/auth/login',
+      timestamp: new Date().toISOString(),
+    },
+    capabilities: ['list_posts', 'create_post', 'read_post', 'update_post', 'delete_post', 'get_profile', 'update_profile'],
+  };
+  const auraStateBase64 = Buffer.from(JSON.stringify(auraState)).toString('base64');
+  res.setHeader('AURA-State', auraStateBase64);
+  
   res.status(200).json({
     success: true,
     user: {

@@ -6,7 +6,9 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Get session/auth info (in a real app, this would come from session/JWT)
-  const isAuthenticated = request.cookies.get('auth-token')?.value ? true : false;
+  // Check for auth-token cookie more reliably
+  const authCookie = request.cookies.get('auth-token');
+  const isAuthenticated = !!(authCookie && authCookie.value && authCookie.value.length > 0);
   
   // Determine available capabilities based on auth state
   const capabilities = isAuthenticated

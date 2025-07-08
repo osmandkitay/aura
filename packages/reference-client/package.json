@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "agent": "tsx src/agent.ts",
-    "crawler": "tsx src/crawler.ts"
+    "crawler": "tsx src/crawler.ts",
+    "test-workflow": "tsx src/test-workflow.ts"
   },
   "dependencies": {
     "@aura/protocol": "workspace:*",

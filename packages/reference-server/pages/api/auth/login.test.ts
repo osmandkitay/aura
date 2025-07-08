@@ -23,7 +23,7 @@ describe('AUTH API - /api/auth/login', () => {
   it('accepts valid credentials', async () => {
     const { req, res } = createMocks({
       method: 'POST',
-      body: { email: 'demo@aura.dev', password: 'password' },
+      body: { email: 'demo@aura.dev', password: 'password123' },
     });
 
     await handler(req as any, res as any);
