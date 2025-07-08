@@ -71,6 +71,51 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
+// Refine the schema to enforce the structure of records
+const resourceSchemaName = 'Resource';
+const capabilitySchemaName = 'Capability';
+
+if (schema.definitions) {
+  // Get the Resource and Capability schemas to include them in the main schema
+  const resourceSchema = generator.getSchemaForSymbol('Resource');
+  const capabilitySchema = generator.getSchemaForSymbol('Capability');
+
+  // Add Resource and Capability definitions to the main schema if they don't exist
+  if (resourceSchema && !schema.definitions[resourceSchemaName]) {
+    schema.definitions[resourceSchemaName] = resourceSchema;
+  }
+  
+  if (capabilitySchema && !schema.definitions[capabilitySchemaName]) {
+    schema.definitions[capabilitySchemaName] = capabilitySchema;
+  }
+
+  // Find the generated name for Record<string, Resource> and refine it
+  const resourceRecordKey = Object.keys(schema.definitions).find(k => k.includes('Record<string,Resource>'));
+  if (resourceRecordKey && schema.definitions[resourceSchemaName]) {
+    console.log(`Refining schema for ${resourceRecordKey}...`);
+    schema.definitions[resourceRecordKey] = {
+      title: resourceRecordKey,
+      type: 'object',
+      additionalProperties: {
+        $ref: `#/definitions/${resourceSchemaName}`
+      }
+    };
+  }
+
+  // Find the generated name for Record<string, Capability> and refine it
+  const capabilityRecordKey = Object.keys(schema.definitions).find(k => k.includes('Record<string,Capability>'));
+  if (capabilityRecordKey && schema.definitions[capabilitySchemaName]) {
+    console.log(`Refining schema for ${capabilityRecordKey}...`);
+    schema.definitions[capabilityRecordKey] = {
+      title: capabilityRecordKey,
+      type: 'object',
+      additionalProperties: {
+        $ref: `#/definitions/${capabilitySchemaName}`
+      }
+    };
+  }
+}
+
 const outputPath = path.join(outputDir, 'aura-v1.0.schema.json');
 fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));
 

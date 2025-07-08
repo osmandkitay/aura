@@ -68,18 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   res.setHeader('Set-Cookie', cookie);
   
-  // Set correct AURA-State header for authenticated user
-  const auraState = {
-    isAuthenticated: true,
-    context: {
-      path: '/api/auth/login',
-      timestamp: new Date().toISOString(),
-    },
-    capabilities: ['list_posts', 'create_post', 'read_post', 'update_post', 'delete_post', 'get_profile', 'update_profile'],
-  };
-  const auraStateBase64 = Buffer.from(JSON.stringify(auraState)).toString('base64');
-  res.setHeader('AURA-State', auraStateBase64);
-  
   res.status(200).json({
     success: true,
     user: {
