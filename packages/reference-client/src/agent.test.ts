@@ -63,7 +63,9 @@ const mockManifest: AuraManifest = {
         required: ["title", "content"],
         properties: {
           title: { type: "string", minLength: 1, maxLength: 200 },
-          content: { type: "string", minLength: 1 }
+          content: { type: "string", minLength: 1 },
+          tags: { type: "array", items: { type: "string" } },
+          published: { type: "boolean", default: false }
         }
       },
       action: {
@@ -74,7 +76,9 @@ const mockManifest: AuraManifest = {
         encoding: "json",
         parameterMapping: {
           title: "/title",
-          content: "/content"
+          content: "/content",
+          tags: "/tags",
+          published: "/published"
         }
       }
     },
@@ -96,6 +100,53 @@ const mockManifest: AuraManifest = {
         encoding: "query",
         parameterMapping: {
           limit: "/limit"
+        }
+      }
+    },
+    update_post: {
+      id: "update_post",
+      v: 1,
+      description: "Update an existing blog post",
+      parameters: {
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: {
+            type: "string",
+            pattern: "^[a-zA-Z0-9-]+$"
+          },
+          title: {
+            type: "string",
+            minLength: 1,
+            maxLength: 200
+          },
+          content: {
+            type: "string",
+            minLength: 1
+          },
+          tags: {
+            type: "array",
+            items: {
+              type: "string"
+            }
+          },
+          published: {
+            type: "boolean"
+          }
+        }
+      },
+      action: {
+        type: "HTTP",
+        method: "PUT",
+        urlTemplate: "/api/posts/{id}",
+        cors: true,
+        encoding: "json",
+        parameterMapping: {
+          id: "/id",
+          title: "/title",
+          content: "/content",
+          tags: "/tags",
+          published: "/published"
         }
       }
     }
@@ -274,7 +325,18 @@ describe('AURA Integration Tests', () => {
 
   describe('Capability Validation', () => {
     it('should validate required parameters', async () => {
-      const client = axios.create({ validateStatus: () => true });
+      const cookieJar = new CookieJar();
+      const client = wrapper(axios.create({
+        jar: cookieJar,
+        withCredentials: true,
+        validateStatus: () => true
+      }));
+
+      // First login to pass authentication
+      await client.post(`${serverUrl}/api/auth/login`, {
+        email: 'demo@aura.dev',
+        password: 'password123'
+      });
       
       // Try to create post without required fields
       const response = await client.post(`${serverUrl}/api/posts`, {

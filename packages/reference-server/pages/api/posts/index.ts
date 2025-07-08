@@ -9,7 +9,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   switch (req.method) {
     case 'GET':
       // List posts - available to all
-      const { limit = 10, offset = 0, tags } = req.query;
+      const { limit = 100, offset = 0, tags } = req.query;
       
       let filteredPosts = [...posts];
       
@@ -23,31 +23,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       
       // Apply pagination
       const start = parseInt(offset as string);
-      const end = start + parseInt(limit as string);
-      const paginatedPosts = filteredPosts.slice(start, end);
+      const limitNum = parseInt(limit as string);
+      const paginatedPosts = limitNum ? filteredPosts.slice(start, start + limitNum) : filteredPosts;
       
       res.status(200).json({
         posts: paginatedPosts,
         total: filteredPosts.length,
-        limit: parseInt(limit as string),
+        limit: limitNum,
         offset: start,
       });
       break;
 
     case 'POST':
-      // Create post - requires authentication
-      if (!isAuthenticated) {
-        res.status(401).json({
-          code: 'UNAUTHORIZED',
-          detail: 'Authentication required',
-          hint: 'Please login first',
-        });
-        return;
-      }
-
-
-
-      // Create new post
+      // Validate required fields first, before checking authentication
       const { title, content, tags: newTags = [], published = false } = req.body;
       
       if (!title || !content) {
@@ -58,6 +46,17 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
+      // Create post - requires authentication
+      if (!isAuthenticated) {
+        res.status(401).json({
+          code: 'UNAUTHORIZED',
+          detail: 'Authentication required',
+          hint: 'Please login first',
+        });
+        return;
+      }
+
+      // Create new post
       const newPost = {
         id: String(posts.length + 1),
         title,
