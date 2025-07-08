@@ -68,7 +68,7 @@ async function planAction(manifest: AuraManifest, prompt: string, state?: AuraSt
 /**
  * Simple URI template expansion for AURA protocol
  */
-function expandUriTemplate(template: string, args: any): { url: string; queryParams: any } {
+export function expandUriTemplate(template: string, args: any): { url: string; queryParams: any } {
     let url = template;
     let queryParams: any = {};
 
@@ -171,4 +171,7 @@ async function main() {
     }
 }
 
-main(); 
+// Avoid executing the CLI flow when the module is imported in a test environment
+if (process.env.NODE_ENV !== 'test') {
+  main();
+} 

@@ -90,6 +90,29 @@ pnpm --filter aura-reference-client crawler -- http://localhost:3000
 
 The output shows a structured JSON object representing the site's capabilities. This is the future of search: indexing actions, not just pages.
 
+### 5. Run the Automated Tests & Coverage
+
+The repository ships with a full Vitest suite that exercises the protocol schemas, the reference server API routes, and the URI-template utilities.
+
+```bash
+# From the repo root
+pnpm test --run
+```
+
+An HTML coverage report will be generated in `coverage/`.
+
+---
+
+## Building Everything
+
+If you want to make sure the whole monorepo compiles (TypeScript + schema generation), simply run:
+
+```bash
+pnpm run build
+```
+
+This triggers the build in every workspace package and regenerates the official JSON Schemas in `packages/aura-protocol/dist/`.
+
 ## The Future is a Collaborative Ecosystem
 
 This repository defines the standard. The true power of AURA will be realized when a community builds on top of it. We envision a future with:

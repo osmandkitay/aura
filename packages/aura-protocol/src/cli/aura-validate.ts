@@ -9,7 +9,7 @@ import axios from 'axios';
 
 interface ValidationResult {
   valid: boolean;
-  errors?: any[];
+  errors?: any[] | null;
   manifest?: any;
   source?: string;
   warnings?: string[];
