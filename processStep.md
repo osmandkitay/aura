@@ -1,160 +1,73 @@
-# **AURA Protocol Codebase Refinement Plan**
+# **AURA Project Enhancement Plan**
 
-## **Introduction**
+This document outlines a series of recommended improvements to the AURA project. The goal of these changes is to increase maintainability, reduce the risk of inconsistencies, and improve the overall clarity of the codebase. Each step includes an explanation of the problem, a proposed solution, and concrete action items.
 
-This document provides a step-by-step guide to implement the refinements discussed in the initial analysis. The AURA project is already of exceptionally high quality. These changes will resolve a few minor inconsistencies, primarily in test data, and improve the overall robustness of the reference implementation, making it an even stronger standard for others to follow.
+## **Step 1: Decouple Capability Permissions from Middleware** ✅
 
-Each step includes the reasoning behind the change, a detailed implementation guide, and a clear, imperative action command.
+### **Problem**
 
-### **Step 1: Correct the Inconsistency in agent.test.ts** ✅
+Currently, the permissions for which capabilities are available to authenticated vs. unauthenticated users are hardcoded directly into packages/reference-server/middleware.ts. This creates a tight coupling between the middleware logic and the aura.json manifest. If a new capability is added or permissions change, the middleware's code must be manually updated, creating a risk of the system's state becoming inconsistent with its advertised capabilities.
 
-This is the most critical change as it corrects a failing test and ensures test data is valid.
+### **Solution**
 
-#### **Reasoning**
+Create a centralized, data-driven permission configuration that the middleware can consume. This will make the system more robust and easier to maintain. We will create a new file to store this mapping.
 
-The integration test should return correct capabilities for authenticated user in packages/reference-client/src/agent.test.ts asserts that the AURA-State for a logged-in user contains the 'update\_post' capability. However, the mockManifest used for this test does not include a definition for update\_post, which causes the test to fail. The fix is to add the missing capability to the mock data, making the test valid and self-contained.
+### **Action Items**
 
-#### **Implementation**
+1. **Create a new file named** permissions.ts **inside** packages/reference-server/lib/**.**  
+   * Add the following content to this file. This map will now be the single source of truth for capability permissions.
 
-In the file aura/packages/reference-client/src/agent.test.ts, locate the mockManifest constant. Inside its capabilities object, you need to add the definition for update\_post. For maximum consistency, this definition should mirror the one from the reference server's actual manifest.
+// packages/reference-server/lib/permissions.ts
 
-Here is the capability block to add:
+/\*\*  
+ \* Defines the authentication requirements for each capability.  
+ \* This provides a single source of truth for permission checks.  
+ \*/  
+export const CAPABILITY\_PERMISSIONS: Record\<string, { authRequired: boolean }\> \= {  
+  // Publicly available capabilities  
+  'login': { authRequired: false },  
+  'list\_posts': { authRequired: false },  
+  'read\_post': { authRequired: false },
 
-// This block should be added inside the \`capabilities: {}\` object of the \`mockManifest\`  
-update\_post: {  
-  id: "update\_post",  
-  v: 1,  
-  description: "Update an existing blog post",  
-  parameters: {  
-    type: "object",  
-    required: \["id"\],  
-    properties: {  
-      id: { type: "string" },  
-      title: { type: "string", minLength: 1 },  
-      content: { type: "string", minLength: 1 }  
-    }  
-  },  
-  action: {  
-    type: "HTTP",  
-    method: "PUT",  
-    urlTemplate: "/api/posts/{id}",  
-    cors: true,  
-    encoding: "json",  
-    parameterMapping: {  
-      id: "/id",  
-      title: "/title",  
-      content: "/content"  
-    }  
-  }  
-},
+  // Capabilities requiring authentication  
+  'create\_post': { authRequired: true },  
+  'update\_post': { authRequired: true },  
+  'delete\_post': { authRequired: true },  
+  'get\_profile': { authRequired: true },  
+  'update\_profile': { authRequired: true },  
+};
 
-#### **Action**
+/\*\*  
+ \* Lists all capabilities defined in the system.  
+ \* This should be kept in sync with aura.json.  
+ \*/  
+export const ALL\_CAPABILITIES \= Object.keys(CAPABILITY\_PERMISSIONS);
 
-**1\. Add the update\_post capability definition to the mockManifest constant in the file aura/packages/reference-client/src/agent.test.ts.**
+2. **Modify the** middleware.ts **file to use this new permission map.**  
+   * Replace the hardcoded arrays with logic that filters capabilities based on the imported map and the user's authentication status.
 
-### **Step 2: Align create\_post Mock with the Reference Implementation** ✅
-
-This change improves the fidelity of the test data, making the client's tests a more accurate reflection of the server's behavior.
-
-#### **Reasoning**
-
-The create\_post capability defined in the mockManifest of agent.test.ts is missing the tags and published parameters that are present in the reference server's live aura.json manifest. While not breaking the existing tests, aligning the mock data prevents future confusion and ensures that tests can be written against the full capability definition.
-
-#### **Implementation**
-
-In the file aura/packages/reference-client/src/agent.test.ts, find the create\_post capability within the mockManifest. You need to update both its parameters and action.parameterMapping sections.
-
-**1\. Update the parameters.properties object:**
-
-// Inside mockManifest \-\> capabilities \-\> create\_post \-\> parameters \-\> properties  
-properties: {  
-  title: { type: "string", minLength: 1, maxLength: 200 },  
-  content: { type: "string", minLength: 1 },  
-  // ADD THESE TWO PROPERTIES  
-  tags: { type: "array", items: { type: "string" } },  
-  published: { type: "boolean", default: false }  
-}
-
-**2\. Update the action.parameterMapping object:**
-
-// Inside mockManifest \-\> capabilities \-\> create\_post \-\> action  
-parameterMapping: {  
-  title: "/title",  
-  content: "/content",  
-  // ADD THESE TWO MAPPINGS  
-  tags: "/tags",  
-  published: "/published"  
-}
-
-#### **Action**
-
-**2\. Update the create\_post capability in the mockManifest of aura/packages/reference-client/src/agent.test.ts to include definitions and mappings for tags and published.**
-
-### **Step 3: Refactor Middleware for Dynamic Capability Management**
-
-This change enhances the maintainability of the reference server by removing hardcoded values. The next step will make this change production-ready.
-
-#### **Reasoning**
-
-The server's middleware.ts currently uses a hardcoded array to define which capabilities are available. By reading the capabilities directly from the manifest file, we create a single source of truth, making the server more robust and easier to maintain.
-
-#### **Implementation**
-
-Modify the file aura/packages/reference-server/middleware.ts. You will replace the static logic with a dynamic approach. Note that the import statement suggested here will be replaced by a more robust method in Step 4\.
-
-// This is the conceptual change. Step 4 will provide the production-safe implementation.  
-import manifest from '../public/.well-known/aura.json';
-
-const authenticatedCapabilities \= Object.keys(manifest.capabilities);  
-const unauthenticatedCapabilities \= \['list\_posts', 'read\_post', 'login'\];
-
-// ... inside middleware  
-const capabilities \= isAuthenticated  
-    ? authenticatedCapabilities  
-    : unauthenticatedCapabilities;
-
-#### **Action**
-
-**3\. Conceptually prepare to refactor aura/packages/reference-server/middleware.ts to dynamically load the capability list from aura.json instead of using a hardcoded array.**
-
-### **Step 4: Ensure Production-Ready Manifest Loading in Middleware**
-
-This new step addresses the excellent feedback from your team and makes the dynamic loading from Step 3 reliable in a production environment.
-
-#### **Reasoning**
-
-Your team correctly pointed out that a direct import of a JSON file from the public directory is unreliable in a Next.js production build (next build). The public directory is for static assets served to the client, not for server-side modules. The build process will likely fail or the file will not be found at runtime. The correct and most robust server-side approach is to read the file directly from the filesystem using Node.js's fs and path modules.
-
-#### **Implementation**
-
-Modify the file aura/packages/reference-server/middleware.ts to use fs.readFileSync. This ensures the manifest is read reliably every time the middleware is executed.
+// packages/reference-server/middleware.ts
 
 import { NextResponse } from 'next/server';  
 import type { NextRequest } from 'next/server';  
-// 1\. Import Node.js modules for file system access  
-import fs from 'fs';  
-import path from 'path';
-
-// 2\. Read the manifest file reliably  
-const manifestPath \= path.join(process.cwd(), 'public', '.well-known', 'aura.json');  
-const manifestFile \= fs.readFileSync(manifestPath, 'utf-8');  
-const manifest \= JSON.parse(manifestFile);
-
-// 3\. Define capability sets based on the loaded manifest  
-const allDefinedCapabilities \= Object.keys(manifest.capabilities);  
-const unauthenticatedCapabilities \= \['list\_posts', 'read\_post', 'login'\];  
-const authenticatedCapabilities \= allDefinedCapabilities; 
+import { ALL\_CAPABILITIES, CAPABILITY\_PERMISSIONS } from './lib/permissions'; // Import the new config
 
 export function middleware(request: NextRequest) {  
-  const response \= NextResponse.next();  
-  const authCookie \= request.cookies.get('auth-token');  
-  const isAuthenticated \= \!\!(authCookie?.value);  
-    
-  // 4\. Use the dynamically defined capability sets  
-  const capabilities \= isAuthenticated  
-    ? authenticatedCapabilities  
-    : unauthenticatedCapabilities;
+  // Get the response  
+  const response \= NextResponse.next();
 
+  // Get session/auth info  
+  const authCookie \= request.cookies.get('auth-token');  
+  const isAuthenticated \= \!\!(authCookie && authCookie.value && authCookie.value.length \> 0);
+
+  // Determine available capabilities dynamically based on the permission map  
+  const capabilities \= ALL\_CAPABILITIES.filter(capId \=\> {  
+    const permission \= CAPABILITY\_PERMISSIONS\[capId\];  
+    if (\!permission) return false; // Default to secure if not defined  
+    return isAuthenticated ? true : \!permission.authRequired;  
+  });
+
+  // Create AURA-State object  
   const auraState \= {  
     isAuthenticated,  
     context: {  
@@ -164,12 +77,233 @@ export function middleware(request: NextRequest) {
     capabilities,  
   };
 
+  // Encode as Base64 and add to response headers  
   const auraStateBase64 \= Buffer.from(JSON.stringify(auraState)).toString('base64');  
   response.headers.set('AURA-State', auraStateBase64);
 
   return response;  
 }
 
-#### **Action**
+// Configure which paths the middleware runs on  
+export const config \= {  
+  matcher: \[  
+    '/((?\!\_next/static|\_next/image|favicon.ico).\*)',  
+  \],  
+};
 
-**4\. Refactor aura/packages/reference-server/middleware.ts to use fs.readFileSync and path.join to reliably load aura.json in both development and production environments.**
+## **Step 2: Refine URI Template Handling for Clarity** ✅
+
+### **Problem**
+
+The function expandUriTemplate in packages/reference-client/src/agent.ts is misleadingly named. It only expands path parameters (e.g., {id}) and completely removes the query string portion of the template (e.g., {?limit}). The actual handling of query parameters is deferred to axios. This can confuse developers about the function's true purpose.
+
+### **Solution**
+
+Rename the function to more accurately describe what it does: preparing the base URL by expanding path variables.
+
+### **Action Items**
+
+1. **Rename the** expandUriTemplate **function in** packages/reference-client/src/agent.ts**.**  
+   * Change the function name to prepareUrlPath.  
+   * Update the function's comment to reflect its actual behavior.
+
+// packages/reference-client/src/agent.ts
+
+/\*\*  
+ \* Prepares the URL path by expanding path parameters (e.g., /posts/{id}) and  
+ \* stripping the query parameter template (e.g., {?limit,offset}).  
+ \* Query parameters are handled separately during the request execution.  
+ \*/  
+export function prepareUrlPath(template: string, args: any): string {  
+    let url \= template;
+
+    // Remove any query parameter templates from the URL template  
+    url \= url.replace(/\\{\\?\[^}\]+\\}/, '');
+
+    // Handle path parameters like {id}  
+    Object.keys(args).forEach(paramKey \=\> {  
+        const paramValue \= args\[paramKey\];  
+        if (paramValue \!== undefined) {  
+            url \= url.replace(\`{${paramKey}}\`, encodeURIComponent(paramValue));  
+        }  
+    });
+
+    return url;  
+}
+
+2. **Update the call to this function within** executeAction **in the same file.**  
+   * Find the executeAction function and change the call from expandUriTemplate to prepareUrlPath.
+
+// packages/reference-client/src/agent.ts
+
+async function executeAction(...) {  
+  // ...  
+  const capability \= manifest.capabilities\[capabilityId\];  
+  if (\!capability) throw new Error(\`Capability ${capabilityId} not found.\`);
+
+  // Expand URI template for path parameters only  
+  const templateUrl \= prepareUrlPath(capability.action.urlTemplate, args); // \<-- UPDATE THIS LINE  
+  const fullUrl \= \`${baseUrl}${templateUrl}\`;
+
+  // ...  
+}
+
+3. **Update the corresponding test file** packages/reference-client/src/agent.test.ts**.**  
+   * Change the import and the test descriptions to use prepareUrlPath.
+
+// packages/reference-client/src/agent.test.ts
+
+// ...  
+import { prepareUrlPath } from './agent'; // \<-- UPDATE THIS IMPORT  
+// ...
+
+describe('AURA Agent Core Functions', () \=\> {  
+  describe('prepareUrlPath', () \=\> { // \<-- UPDATE THIS DESCRIPTION  
+    it('should expand simple path parameters', () \=\> {  
+      const result \= prepareUrlPath('/api/posts/{id}', { id: '123' }); // \<-- UPDATE FUNCTION CALL  
+      expect(result).toBe('/api/posts/123');  
+    });
+
+    it('should remove query parameter templates from URL', () \=\> {  
+      const result \= prepareUrlPath('/api/posts{?limit,offset}', { limit: 10, offset: 0 }); // \<-- UPDATE FUNCTION CALL  
+      expect(result).toBe('/api/posts');  
+    });
+
+    // ... update other tests in this describe block  
+  });  
+});
+
+## **Step 3: Add Clarity to Parameter Mapping Implementation** ✅
+
+### **Problem**
+
+The mapParameters function in packages/reference-client/src/agent.ts is a simplified implementation of the JSON Pointer standard (RFC 6901). It only handles top-level pointers (e.g., /email) and does not support nested objects or arrays. While this is sufficient for the current reference implementation, it could be a source of confusion or bugs if the protocol is used with more complex APIs.
+
+### **Solution**
+
+Add a detailed comment to the function to clearly state its scope and limitations. This manages expectations and prevents incorrect usage.
+
+### **Action Items**
+
+1. **Add a more descriptive comment to the** mapParameters **function.**  
+   * In packages/reference-client/src/agent.ts, update the comment for the mapParameters function as follows:
+
+// packages/reference-client/src/agent.ts
+
+/\*\*  
+ \* Maps arguments from the LLM response to a new object based on the capability's  
+ \* parameterMapping.  
+ \*  
+ \* This function uses a simplified implementation of JSON Pointer syntax.  
+ \* It currently only supports top-level, non-nested pointers.  
+ \* For example:  
+ \* \- \`"/email"\` maps to \`args.email\`  
+ \* \- \`"/title"\` maps to \`args.title\`  
+ \*  
+ \* Nested pointers like \`"/user/name"\` are not supported in this reference client.  
+ \*  
+ \* @param args The arguments object, typically from the LLM.  
+ \* @param parameterMapping The mapping from the capability definition.  
+ \* @returns A new object with keys and values mapped for the HTTP request.  
+ \*/  
+function mapParameters(args: any, parameterMapping: Record\<string, string\>): any {  
+    const mapped: any \= {};
+
+    for (const \[paramName, jsonPointer\] of Object.entries(parameterMapping)) {  
+        // Simplified JSON Pointer logic for top-level keys  
+        if (jsonPointer.startsWith('/')) {  
+            const key \= jsonPointer.slice(1); // Remove leading "/"  
+            if (args\[key\] \!== undefined) {  
+                mapped\[paramName\] \= args\[key\];  
+            }  
+        }  
+    }
+
+    return mapped;  
+}
+
+## **Step 4: Enforce Consistency Between TypeScript Interfaces and JSON Schema** ✅
+
+### **Problem**
+
+A subtle but critical risk in the project is "schema drift." The TypeScript interfaces (e.g., AuraManifest in src/index.ts) define which properties are optional (?) for developers, while the generated dist/aura-v1.0.schema.json defines this for validation tools via its required arrays. If these two sources of truth diverge, the build may succeed, but validation will fail unexpectedly, or worse, allow invalid data to be processed.
+
+### **Solution**
+
+Add a new, automated unit test to the aura-protocol package. This test will act as a safeguard, comparing the required fields in the generated JSON schema against a manually-maintained list of expected required fields for each major interface. It will fail the build if there is any mismatch, ensuring that any change to a field's optionality is intentional and synchronized.
+
+### **Action Items**
+
+1. **Create a new test file named** schema-sync.test.ts **inside** packages/aura-protocol/src/**.**  
+   * Add the following content to this file. This test explicitly declares the expected required fields for each interface and compares them against the generated schema.
+
+// packages/aura-protocol/src/schema-sync.test.ts
+
+import { describe, it, expect } from 'vitest';  
+import \* as fs from 'fs';  
+import \* as path from 'path';
+
+// Load the generated JSON schema, which is the artifact we are testing.  
+const schemaPath \= path.join(\_\_dirname, '../dist/aura-v1.0.schema.json');  
+if (\!fs.existsSync(schemaPath)) {  
+  throw new Error(\`Schema file not found at ${schemaPath}. Run 'npm run build' in the protocol package first.\`);  
+}  
+const schema \= JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+
+/\*\*  
+ \* Helper function to compare required properties cleanly.  
+ \* @param definition The schema definition to check.  
+ \* @param expected The expected array of required properties.  
+ \*/  
+function assertRequiredProperties(definition: any, expected: string\[\]) {  
+  // Sort both arrays to ensure comparison is not order-dependent.  
+  const actualRequired \= (definition?.required || \[\]).sort();  
+  const expectedRequired \= \[...expected\].sort();  
+  expect(actualRequired).toEqual(expectedRequired);  
+}
+
+describe('JSON Schema and TypeScript Interface Synchronization', () \=\> {
+
+  it('should have correct required fields for AuraManifest', () \=\> {  
+    const expected \= \['protocol', 'version', 'site', 'resources', 'capabilities', '$schema'\];  
+    assertRequiredProperties(schema, expected);  
+  });
+
+  it('should have correct required fields for Resource', () \=\> {  
+    const expected \= \['uriPattern', 'description', 'operations'\];  
+    const definition \= schema.definitions?.Resource;  
+    expect(definition).toBeDefined();  
+    assertRequiredProperties(definition, expected);  
+  });
+
+  it('should have correct required fields for Capability', () \=\> {  
+    const expected \= \['id', 'v', 'description', 'action'\];  
+    const definition \= schema.definitions?.Capability;  
+    expect(definition).toBeDefined();  
+    assertRequiredProperties(definition, expected);  
+  });
+
+  it('should have correct required fields for HttpAction', () \=\> {  
+    const definitionName \= Object.keys(schema.definitions?.Capability.definitions || {}).find(k \=\> k \=== 'HttpAction');  
+    const definition \= schema.definitions?.Capability.definitions\[definitionName\!\];  
+    const expected \= \['type', 'method', 'urlTemplate', 'parameterMapping'\];  
+    expect(definition).toBeDefined();  
+    assertRequiredProperties(definition, expected);  
+  });
+
+  it('should have correct required fields for Policy', () \=\> {  
+    const definition \= schema.definitions?.Policy;  
+    // Policy itself is optional, but if present, it has no required fields at its top level.  
+    const expected: string\[\] \= \[\];  
+    expect(definition).toBeDefined();  
+    assertRequiredProperties(definition, expected);  
+  });
+
+});
+
+2. **Run the test suite.**  
+   * This new test will now be automatically included when you run pnpm test. It will fail if, for example, a developer removes the ? from policy?: Policy in src/index.ts but forgets to update the test, or if the schema generator produces an unexpected result. This enforces deliberate and synchronized changes.
+
+## **Conclusion**
+
+By implementing these four steps, the AURA project will be more robust, maintainable, and developer-friendly. Decoupling permissions and adding schema synchronization tests remove potential sources of critical bugs, while the other changes improve code clarity, making it easier for new contributors to understand the system's architecture and intent.

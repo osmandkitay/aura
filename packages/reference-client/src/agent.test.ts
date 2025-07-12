@@ -12,7 +12,7 @@ vi.mock('openai', () => {
 // Ensure the OpenAI client can initialize in the agent module during tests
 process.env.NODE_ENV = 'test';
 process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-test-key';
-import { expandUriTemplate } from './agent';
+import { prepareUrlPath } from './agent';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
@@ -154,24 +154,24 @@ const mockManifest: AuraManifest = {
 };
 
 describe('AURA Agent Core Functions', () => {
-  describe('expandUriTemplate', () => {
+  describe('prepareUrlPath', () => {
     it('should expand simple path parameters', () => {
-      const result = expandUriTemplate('/api/posts/{id}', { id: '123' });
+      const result = prepareUrlPath('/api/posts/{id}', { id: '123' });
       expect(result).toBe('/api/posts/123');
     });
 
     it('should remove query parameter templates from URL', () => {
-      const result = expandUriTemplate('/api/posts{?limit,offset}', { limit: 10, offset: 0 });
+      const result = prepareUrlPath('/api/posts{?limit,offset}', { limit: 10, offset: 0 });
       expect(result).toBe('/api/posts');
     });
 
     it('should handle exploded array parameter templates', () => {
-      const result = expandUriTemplate('/api/posts{?tags*}', { tags: ['tech', 'ai'] });
+      const result = prepareUrlPath('/api/posts{?tags*}', { tags: ['tech', 'ai'] });
       expect(result).toBe('/api/posts');
     });
 
     it('should handle mixed path and query parameters', () => {
-      const result = expandUriTemplate('/api/posts/{id}{?include}', { id: '123', include: 'comments' });
+      const result = prepareUrlPath('/api/posts/{id}{?include}', { id: '123', include: 'comments' });
       expect(result).toBe('/api/posts/123');
     });
   });

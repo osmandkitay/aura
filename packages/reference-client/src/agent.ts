@@ -151,9 +151,11 @@ async function analyzePromptComplexity(prompt: string): Promise<string[]> {
 }
 
 /**
- * Simple URI template expansion for AURA protocol - handles only path parameters
+ * Prepares the URL path by expanding path parameters (e.g., /posts/{id}) and
+ * stripping the query parameter template (e.g., {?limit,offset}).
+ * Query parameters are handled separately during the request execution.
  */
-export function expandUriTemplate(template: string, args: any): string {
+export function prepareUrlPath(template: string, args: any): string {
     let url = template;
 
     // Remove any query parameter templates from the URL template
@@ -172,8 +174,20 @@ export function expandUriTemplate(template: string, args: any): string {
 }
 
 /**
- * Maps arguments according to the capability's parameterMapping.
- * Uses JSON Pointer syntax (e.g., "/email" maps to args.email).
+ * Maps arguments from the LLM response to a new object based on the capability's
+ * parameterMapping.
+ *
+ * This function uses a simplified implementation of JSON Pointer syntax.
+ * It currently only supports top-level, non-nested pointers.
+ * For example:
+ * - `"/email"` maps to `args.email`
+ * - `"/title"` maps to `args.title`
+ *
+ * Nested pointers like `"/user/name"` are not supported in this reference client.
+ *
+ * @param args The arguments object, typically from the LLM.
+ * @param parameterMapping The mapping from the capability definition.
+ * @returns A new object with keys and values mapped for the HTTP request.
  */
 function mapParameters(args: any, parameterMapping: Record<string, string>): any {
     const mapped: any = {};
@@ -201,7 +215,7 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
     if (!capability) throw new Error(`Capability ${capabilityId} not found.`);
 
     // Expand URI template for path parameters only
-    const templateUrl = expandUriTemplate(capability.action.urlTemplate, args);
+    const templateUrl = prepareUrlPath(capability.action.urlTemplate, args);
     const fullUrl = `${baseUrl}${templateUrl}`;
 
     // Determine request data and params based on encoding and parameterMapping

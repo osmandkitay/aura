@@ -46,8 +46,30 @@ export interface Capability {
   // Versioning: A simple integer incremented for each breaking change
   v: number;
   description: string;
-  parameters?: import('json-schema').JSONSchema7;
+  parameters?: JSONSchema;
   action: HttpAction;
+}
+
+/**
+ * JSONSchema - A simplified JSON Schema definition
+ * Represents the structure for capability parameters
+ */
+export interface JSONSchema {
+  type?: string;
+  properties?: Record<string, JSONSchema>;
+  required?: string[];
+  items?: JSONSchema;
+  format?: string;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  enum?: any[];
+  default?: any;
+  description?: string;
+  title?: string;
+  additionalProperties?: boolean | JSONSchema;
 }
 
 /**

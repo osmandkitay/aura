@@ -180,7 +180,7 @@ describe('AURA Protocol JSON Schema Validation', () => {
       resources: {},
       capabilities: {
         some_capability: {
-          // The main schema doesn't enforce capability structure details
+          id: 'some_capability', // Added missing required field
           v: 1,
           description: 'Test capability',
           parameters: {
@@ -190,7 +190,8 @@ describe('AURA Protocol JSON Schema Validation', () => {
           action: {
             type: 'HTTP',
             method: 'GET',
-            urlTemplate: '/api/test'
+            urlTemplate: '/api/test',
+            parameterMapping: {} // Added missing required field
           }
         }
       }
@@ -286,10 +287,10 @@ describe('AURA Protocol JSON Schema Validation', () => {
       },
       resources: {
         posts: {
-          // The main schema doesn't enforce resource structure details
+          uriPattern: '/api/posts/{id}', // Added missing required field
           description: 'Blog posts',
           operations: {
-            GET: { capabilityId: 'some_capability' }
+            GET: { capabilityId: 'test_capability' } // Fixed reference
           }
         }
       },
@@ -305,7 +306,8 @@ describe('AURA Protocol JSON Schema Validation', () => {
           action: {
             type: 'HTTP',
             method: 'GET',
-            urlTemplate: '/api/test'
+            urlTemplate: '/api/test',
+            parameterMapping: {} // Added missing required field
           }
         }
       }

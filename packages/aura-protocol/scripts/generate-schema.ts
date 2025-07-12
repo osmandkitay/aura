@@ -114,6 +114,29 @@ if (schema.definitions) {
       }
     };
   }
+
+  // Fix JSONSchema reference issue by moving it to top level
+  const capabilityDef = schema.definitions[capabilitySchemaName];
+  if (capabilityDef && typeof capabilityDef === 'object' && 'definitions' in capabilityDef && capabilityDef.definitions) {
+    console.log('Moving JSONSchema definition to top level...');
+    const nestedDefs = capabilityDef.definitions as any;
+    
+    if (nestedDefs['JSONSchema']) {
+      schema.definitions['JSONSchema'] = nestedDefs['JSONSchema'];
+    }
+    if (nestedDefs['Record<string,JSONSchema>']) {
+      schema.definitions['Record<string,JSONSchema>'] = nestedDefs['Record<string,JSONSchema>'];
+    }
+    if (nestedDefs['HttpAction']) {
+      schema.definitions['HttpAction'] = nestedDefs['HttpAction'];
+    }
+    if (nestedDefs['Record<string,string>']) {
+      schema.definitions['Record<string,string>'] = nestedDefs['Record<string,string>'];
+    }
+    
+    // Remove the nested definitions to avoid duplication
+    delete capabilityDef.definitions;
+  }
 }
 
 // Remove non-standard keywords to ensure schema portability

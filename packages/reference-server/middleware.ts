@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { ALL_CAPABILITIES, CAPABILITY_PERMISSIONS } from './lib/permissions'; // Import the new config
 
 export function middleware(request: NextRequest) {
   // Get the response
@@ -10,10 +11,12 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get('auth-token');
   const isAuthenticated = !!(authCookie && authCookie.value && authCookie.value.length > 0);
   
-  // Determine available capabilities based on auth state
-  const capabilities = isAuthenticated
-    ? ['list_posts', 'create_post', 'read_post', 'update_post', 'delete_post', 'get_profile', 'update_profile']
-    : ['list_posts', 'read_post', 'login'];
+  // Determine available capabilities dynamically based on the permission map
+  const capabilities = ALL_CAPABILITIES.filter(capId => {
+    const permission = CAPABILITY_PERMISSIONS[capId];
+    if (!permission) return false; // Default to secure if not defined
+    return isAuthenticated ? true : !permission.authRequired;
+  });
 
   // Create AURA-State object
   const auraState = {
