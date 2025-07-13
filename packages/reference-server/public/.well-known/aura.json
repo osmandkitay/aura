@@ -144,6 +144,7 @@
         "method": "GET",
         "urlTemplate": "/api/posts/{id}",
         "cors": true,
+        "encoding": "query",
         "parameterMapping": {
           "id": "/id"
         }
@@ -215,6 +216,7 @@
         "method": "DELETE",
         "urlTemplate": "/api/posts/{id}",
         "cors": true,
+        "encoding": "query",
         "parameterMapping": {
           "id": "/id"
         }
@@ -258,7 +260,8 @@
         "type": "HTTP",
         "method": "GET",
         "urlTemplate": "/api/user/profile",
-        "cors": true
+        "cors": true,
+        "parameterMapping": {}
       }
     },
     "update_profile": {

@@ -1,309 +1,221 @@
-# **AURA Project Enhancement Plan**
+# **AURA Agent Improvement Plan**
 
-This document outlines a series of recommended improvements to the AURA project. The goal of these changes is to increase maintainability, reduce the risk of inconsistencies, and improve the overall clarity of the codebase. Each step includes an explanation of the problem, a proposed solution, and concrete action items.
+This document outlines the refactoring steps required to enhance the AURA reference agent. The goal is to address two key areas: **state persistence** (for handling authentication) and **robust multi-step command processing**.
 
-## **Step 1: Decouple Capability Permissions from Middleware** ✅
+Implementing these changes will significantly increase the agent's capabilities, allowing it to perform complex, authenticated workflows as envisioned by the AURA protocol.
 
-### **Problem**
+## **Part 1: Implement State Persistence for Authentication**
 
-Currently, the permissions for which capabilities are available to authenticated vs. unauthenticated users are hardcoded directly into packages/reference-server/middleware.ts. This creates a tight coupling between the middleware logic and the aura.json manifest. If a new capability is added or permissions change, the middleware's code must be manually updated, creating a risk of the system's state becoming inconsistent with its advertised capabilities.
+### **1.1. The Problem: Stateless Execution**
 
-### **Solution**
+The agent currently operates in a stateless manner. Each time the agent script is run, it starts with a new, empty CookieJar.
 
-Create a centralized, data-driven permission configuration that the middleware can consume. This will make the system more robust and easier to maintain. We will create a new file to store this mapping.
+* **Symptom:** After a successful login operation, the server sends a Set-Cookie header with an auth-token. However, the agent discards this cookie at the end of its execution. Subsequent commands (or even subsequent steps within a single complex command) are therefore unauthenticated. This is confirmed by the AURA-State header in the terminal output, which always shows "isAuthenticated": false".  
+* **Why it's critical:** Without state persistence, the agent can never access capabilities that require authentication (e.g., create\_post, update\_profile), which severely limits its usefulness.
 
-### **Action Items**
+### **1.2. The Solution: Persist the CookieJar**
 
-1. **Create a new file named** permissions.ts **inside** packages/reference-server/lib/**.**  
-   * Add the following content to this file. This map will now be the single source of truth for capability permissions.
+To solve this, we will persist the CookieJar to a file between executions. The agent will load cookies from this file at the start of a command and save any new or updated cookies back to the file after each network request.
 
-// packages/reference-server/lib/permissions.ts
+* **Relevant File:** packages/reference-client/src/agent.ts
 
-/\*\*  
- \* Defines the authentication requirements for each capability.  
- \* This provides a single source of truth for permission checks.  
- \*/  
-export const CAPABILITY\_PERMISSIONS: Record\<string, { authRequired: boolean }\> \= {  
-  // Publicly available capabilities  
-  'login': { authRequired: false },  
-  'list\_posts': { authRequired: false },  
-  'read\_post': { authRequired: false },
+### **1.3. Action Steps**
 
-  // Capabilities requiring authentication  
-  'create\_post': { authRequired: true },  
-  'update\_post': { authRequired: true },  
-  'delete\_post': { authRequired: true },  
-  'get\_profile': { authRequired: true },  
-  'update\_profile': { authRequired: true },  
-};
+1. **Import necessary modules.**  
+   * Add fs (File System) and path to your imports in agent.ts to handle file operations.
 
-/\*\*  
- \* Lists all capabilities defined in the system.  
- \* This should be kept in sync with aura.json.  
- \*/  
-export const ALL\_CAPABILITIES \= Object.keys(CAPABILITY\_PERMISSIONS);
-
-2. **Modify the** middleware.ts **file to use this new permission map.**  
-   * Replace the hardcoded arrays with logic that filters capabilities based on the imported map and the user's authentication status.
-
-// packages/reference-server/middleware.ts
-
-import { NextResponse } from 'next/server';  
-import type { NextRequest } from 'next/server';  
-import { ALL\_CAPABILITIES, CAPABILITY\_PERMISSIONS } from './lib/permissions'; // Import the new config
-
-export function middleware(request: NextRequest) {  
-  // Get the response  
-  const response \= NextResponse.next();
-
-  // Get session/auth info  
-  const authCookie \= request.cookies.get('auth-token');  
-  const isAuthenticated \= \!\!(authCookie && authCookie.value && authCookie.value.length \> 0);
-
-  // Determine available capabilities dynamically based on the permission map  
-  const capabilities \= ALL\_CAPABILITIES.filter(capId \=\> {  
-    const permission \= CAPABILITY\_PERMISSIONS\[capId\];  
-    if (\!permission) return false; // Default to secure if not defined  
-    return isAuthenticated ? true : \!permission.authRequired;  
-  });
-
-  // Create AURA-State object  
-  const auraState \= {  
-    isAuthenticated,  
-    context: {  
-      path: request.nextUrl.pathname,  
-      timestamp: new Date().toISOString(),  
-    },  
-    capabilities,  
-  };
-
-  // Encode as Base64 and add to response headers  
-  const auraStateBase64 \= Buffer.from(JSON.stringify(auraState)).toString('base64');  
-  response.headers.set('AURA-State', auraStateBase64);
-
-  return response;  
-}
-
-// Configure which paths the middleware runs on  
-export const config \= {  
-  matcher: \[  
-    '/((?\!\_next/static|\_next/image|favicon.ico).\*)',  
-  \],  
-};
-
-## **Step 2: Refine URI Template Handling for Clarity** ✅
-
-### **Problem**
-
-The function expandUriTemplate in packages/reference-client/src/agent.ts is misleadingly named. It only expands path parameters (e.g., {id}) and completely removes the query string portion of the template (e.g., {?limit}). The actual handling of query parameters is deferred to axios. This can confuse developers about the function's true purpose.
-
-### **Solution**
-
-Rename the function to more accurately describe what it does: preparing the base URL by expanding path variables.
-
-### **Action Items**
-
-1. **Rename the** expandUriTemplate **function in** packages/reference-client/src/agent.ts**.**  
-   * Change the function name to prepareUrlPath.  
-   * Update the function's comment to reflect its actual behavior.
-
-// packages/reference-client/src/agent.ts
-
-/\*\*  
- \* Prepares the URL path by expanding path parameters (e.g., /posts/{id}) and  
- \* stripping the query parameter template (e.g., {?limit,offset}).  
- \* Query parameters are handled separately during the request execution.  
- \*/  
-export function prepareUrlPath(template: string, args: any): string {  
-    let url \= template;
-
-    // Remove any query parameter templates from the URL template  
-    url \= url.replace(/\\{\\?\[^}\]+\\}/, '');
-
-    // Handle path parameters like {id}  
-    Object.keys(args).forEach(paramKey \=\> {  
-        const paramValue \= args\[paramKey\];  
-        if (paramValue \!== undefined) {  
-            url \= url.replace(\`{${paramKey}}\`, encodeURIComponent(paramValue));  
-        }  
-    });
-
-    return url;  
-}
-
-2. **Update the call to this function within** executeAction **in the same file.**  
-   * Find the executeAction function and change the call from expandUriTemplate to prepareUrlPath.
-
-// packages/reference-client/src/agent.ts
-
-async function executeAction(...) {  
-  // ...  
-  const capability \= manifest.capabilities\[capabilityId\];  
-  if (\!capability) throw new Error(\`Capability ${capabilityId} not found.\`);
-
-  // Expand URI template for path parameters only  
-  const templateUrl \= prepareUrlPath(capability.action.urlTemplate, args); // \<-- UPDATE THIS LINE  
-  const fullUrl \= \`${baseUrl}${templateUrl}\`;
-
-  // ...  
-}
-
-3. **Update the corresponding test file** packages/reference-client/src/agent.test.ts**.**  
-   * Change the import and the test descriptions to use prepareUrlPath.
-
-// packages/reference-client/src/agent.test.ts
-
-// ...  
-import { prepareUrlPath } from './agent'; // \<-- UPDATE THIS IMPORT  
-// ...
-
-describe('AURA Agent Core Functions', () \=\> {  
-  describe('prepareUrlPath', () \=\> { // \<-- UPDATE THIS DESCRIPTION  
-    it('should expand simple path parameters', () \=\> {  
-      const result \= prepareUrlPath('/api/posts/{id}', { id: '123' }); // \<-- UPDATE FUNCTION CALL  
-      expect(result).toBe('/api/posts/123');  
-    });
-
-    it('should remove query parameter templates from URL', () \=\> {  
-      const result \= prepareUrlPath('/api/posts{?limit,offset}', { limit: 10, offset: 0 }); // \<-- UPDATE FUNCTION CALL  
-      expect(result).toBe('/api/posts');  
-    });
-
-    // ... update other tests in this describe block  
-  });  
-});
-
-## **Step 3: Add Clarity to Parameter Mapping Implementation** ✅
-
-### **Problem**
-
-The mapParameters function in packages/reference-client/src/agent.ts is a simplified implementation of the JSON Pointer standard (RFC 6901). It only handles top-level pointers (e.g., /email) and does not support nested objects or arrays. While this is sufficient for the current reference implementation, it could be a source of confusion or bugs if the protocol is used with more complex APIs.
-
-### **Solution**
-
-Add a detailed comment to the function to clearly state its scope and limitations. This manages expectations and prevents incorrect usage.
-
-### **Action Items**
-
-1. **Add a more descriptive comment to the** mapParameters **function.**  
-   * In packages/reference-client/src/agent.ts, update the comment for the mapParameters function as follows:
-
-// packages/reference-client/src/agent.ts
-
-/\*\*  
- \* Maps arguments from the LLM response to a new object based on the capability's  
- \* parameterMapping.  
- \*  
- \* This function uses a simplified implementation of JSON Pointer syntax.  
- \* It currently only supports top-level, non-nested pointers.  
- \* For example:  
- \* \- \`"/email"\` maps to \`args.email\`  
- \* \- \`"/title"\` maps to \`args.title\`  
- \*  
- \* Nested pointers like \`"/user/name"\` are not supported in this reference client.  
- \*  
- \* @param args The arguments object, typically from the LLM.  
- \* @param parameterMapping The mapping from the capability definition.  
- \* @returns A new object with keys and values mapped for the HTTP request.  
- \*/  
-function mapParameters(args: any, parameterMapping: Record\<string, string\>): any {  
-    const mapped: any \= {};
-
-    for (const \[paramName, jsonPointer\] of Object.entries(parameterMapping)) {  
-        // Simplified JSON Pointer logic for top-level keys  
-        if (jsonPointer.startsWith('/')) {  
-            const key \= jsonPointer.slice(1); // Remove leading "/"  
-            if (args\[key\] \!== undefined) {  
-                mapped\[paramName\] \= args\[key\];  
-            }  
-        }  
-    }
-
-    return mapped;  
-}
-
-## **Step 4: Enforce Consistency Between TypeScript Interfaces and JSON Schema** ✅
-
-### **Problem**
-
-A subtle but critical risk in the project is "schema drift." The TypeScript interfaces (e.g., AuraManifest in src/index.ts) define which properties are optional (?) for developers, while the generated dist/aura-v1.0.schema.json defines this for validation tools via its required arrays. If these two sources of truth diverge, the build may succeed, but validation will fail unexpectedly, or worse, allow invalid data to be processed.
-
-### **Solution**
-
-Add a new, automated unit test to the aura-protocol package. This test will act as a safeguard, comparing the required fields in the generated JSON schema against a manually-maintained list of expected required fields for each major interface. It will fail the build if there is any mismatch, ensuring that any change to a field's optionality is intentional and synchronized.
-
-### **Action Items**
-
-1. **Create a new test file named** schema-sync.test.ts **inside** packages/aura-protocol/src/**.**  
-   * Add the following content to this file. This test explicitly declares the expected required fields for each interface and compares them against the generated schema.
-
-// packages/aura-protocol/src/schema-sync.test.ts
-
-import { describe, it, expect } from 'vitest';  
 import \* as fs from 'fs';  
 import \* as path from 'path';
 
-// Load the generated JSON schema, which is the artifact we are testing.  
-const schemaPath \= path.join(\_\_dirname, '../dist/aura-v1.0.schema.json');  
-if (\!fs.existsSync(schemaPath)) {  
-  throw new Error(\`Schema file not found at ${schemaPath}. Run 'npm run build' in the protocol package first.\`);  
-}  
-const schema \= JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+2. **Define a persistent storage path for the cookies.**  
+   * Create a constant for the cookie file path. A hidden file in the user's home directory or the project directory is a good choice.
 
-/\*\*  
- \* Helper function to compare required properties cleanly.  
- \* @param definition The schema definition to check.  
- \* @param expected The expected array of required properties.  
- \*/  
-function assertRequiredProperties(definition: any, expected: string\[\]) {  
-  // Sort both arrays to ensure comparison is not order-dependent.  
-  const actualRequired \= (definition?.required || \[\]).sort();  
-  const expectedRequired \= \[...expected\].sort();  
-  expect(actualRequired).toEqual(expectedRequired);  
+// At the top of agent.ts  
+const COOKIE\_FILE\_PATH \= path.join(\_\_dirname, '.aura-cookies.json');
+
+3. **Create a function to load the** CookieJar **from the file.**  
+   * This function will read the JSON file, deserialize it, and create a CookieJar instance from the stored data. It should handle cases where the file doesn't exist yet.
+
+// Add this helper function in agent.ts  
+async function loadCookieJar(): Promise\<CookieJar\> {  
+  try {  
+    if (fs.existsSync(COOKIE\_FILE\_PATH)) {  
+      const cookieJson \= await fs.promises.readFile(COOKIE\_FILE\_PATH, 'utf-8');  
+      const deserializedJar \= JSON.parse(cookieJson);  
+      return CookieJar.fromJSON(deserializedJar);  
+    }  
+  } catch (error) {  
+    console.warn('\[State\] Could not load cookies, starting a new session.', error);  
+  }  
+  return new CookieJar();  
 }
 
-describe('JSON Schema and TypeScript Interface Synchronization', () \=\> {
+4. **Create a function to save the** CookieJar **to the file.**  
+   * This function will serialize the current CookieJar state to JSON and write it to the file.
 
-  it('should have correct required fields for AuraManifest', () \=\> {  
-    const expected \= \['protocol', 'version', 'site', 'resources', 'capabilities', '$schema'\];  
-    assertRequiredProperties(schema, expected);  
+// Add this helper function in agent.ts  
+async function saveCookieJar(jar: CookieJar): Promise\<void\> {  
+  try {  
+    const cookieJson \= JSON.stringify(jar.toJSON(), null, 2);  
+    await fs.promises.writeFile(COOKIE\_FILE\_PATH, cookieJson, 'utf-8');  
+  } catch (error) {  
+    console.error('\[State\] Failed to save cookies.', error);  
+  }  
+}
+
+5. **Integrate loading and saving into the main execution flow.**  
+   * Modify the main function and the client initialization. The agent should load the CookieJar *before* the first request and save it *after* any request is made.
+
+// In agent.ts, modify the client initialization and main function
+
+// ... (imports)
+
+// A global variable for the jar to be used across the script's lifecycle  
+let cookieJar: CookieJar; 
+
+// Replace the existing client creation  
+const client \= wrapper(axios.create({  
+  jar: new CookieJar(), // Start with a temporary one  
+  withCredentials: true,  
+}));
+
+// In the main() function, at the very beginning:  
+async function main() {  
+  // ...  
+  try {  
+    cookieJar \= await loadCookieJar();  
+    client.defaults.jar \= cookieJar; // Assign the loaded/new jar to the client instance  
+    // ... rest of the main function  
+  }   
+  // ...  
+}
+
+// In the executeAction() function, after the request completes:  
+async function executeAction(...) {  
+    // ... (existing code for making the request)  
+    const response \= await client({ /\* ... \*/ });
+
+    // Save the state of the cookie jar after the request  
+    await saveCookieJar(cookieJar);
+
+    // ... (existing code for processing the response)  
+    return { status: response.status, data: response.data, state: auraState };  
+}
+
+## **Part 2: Refactor Multi-Step Command Processing**
+
+### **2.1. The Problem: Brittle Prompt Analysis**
+
+The current analyzePromptComplexity function uses regular expressions to detect and parse multi-step commands.
+
+* **Symptom:** When given a complex prompt like "login... and add new blog...", the logic correctly identifies the *pattern* but fails to *extract* the parameters correctly. This causes the function to fall back to treating the entire prompt as a single step, leading to incorrect behavior (only the login part is executed).  
+* **Why it's critical:** The agent's ability to perform complex, sequential tasks is a core part of its intelligence. A brittle parser makes it unreliable and unable to fulfill user intent.
+
+### **2.2. The Solution: Leverage the LLM for Structured Output**
+
+Instead of using regex on the prompt, we will instruct the LLM to act as the parser. We will ask it to return a structured JSON object representing the sequence of actions and their arguments. This is significantly more robust and scalable.
+
+* **Relevant File:** packages/reference-client/src/agent.ts
+
+### **2.3. Action Steps**
+
+1. **Redefine the** planAction **function's role.**  
+   * Instead of planning a single action, this function (perhaps renamed to createExecutionPlan) will now be responsible for creating the *entire* plan of steps from the initial prompt.  
+2. **Modify the LLM system prompt to demand structured JSON output.**  
+   * Update the prompt in what is now the createExecutionPlan function. The new prompt will instruct the model to return a JSON array of action objects.
+
+// Replace the logic inside planAction (or a new createExecutionPlan function)  
+async function createExecutionPlan(manifest: AuraManifest, prompt: string, state?: AuraState | null): Promise\<{ capabilityId: string; args: any; }\[\]\> {  
+  console.log(\`\[Planning\] Creating execution plan for prompt: "${prompt}"\`);
+
+  const availableCapabilities \= state?.capabilities || Object.keys(manifest.capabilities);  
+  const tools \= availableCapabilities.map(capId \=\> {  
+    // ... (existing tool generation logic)  
+  }).filter(Boolean);
+
+  const completion \= await openai.chat.completions.create({  
+      model: 'gpt-4o-mini',  
+      response\_format: { type: "json\_object" }, // Enforce JSON output\!  
+      messages: \[  
+          {  
+              role: 'system',  
+              content: \`You are an AI agent controller. Your task is to analyze the user's request and break it down into a sequence of executable steps.  
+              Respond with a JSON object containing a "steps" key.  
+              The value of "steps" must be an array of objects, where each object represents one capability to execute and has two keys: "capabilityId" (the name of the function to call) and "args" (an object of parameters for that function).  
+              Current site state: ${JSON.stringify(state, null, 2)}  
+              Available capabilities: ${availableCapabilities.join(', ')}\`  
+          },  
+          { role: 'user', content: prompt }  
+      \],  
+      tools: tools as any,  
+      tool\_choice: 'auto',  
   });
 
-  it('should have correct required fields for Resource', () \=\> {  
-    const expected \= \['uriPattern', 'description', 'operations'\];  
-    const definition \= schema.definitions?.Resource;  
-    expect(definition).toBeDefined();  
-    assertRequiredProperties(definition, expected);  
-  });
+  const responseContent \= completion.choices\[0\].message.tool\_calls?.\[0\].function.arguments;  
+  if (\!responseContent) {  
+      throw new Error("LLM failed to generate an execution plan.");  
+  }
 
-  it('should have correct required fields for Capability', () \=\> {  
-    const expected \= \['id', 'v', 'description', 'action'\];  
-    const definition \= schema.definitions?.Capability;  
-    expect(definition).toBeDefined();  
-    assertRequiredProperties(definition, expected);  
-  });
+  console.log(\`\[Planning\] LLM generated plan: ${responseContent}\`);  
+  try {  
+      // The LLM tool-calling feature often wraps the response.  
+      // Adjust parsing based on the actual output format.  
+      // Let's assume the LLM provides the arguments to a single "execute\_plan" function.  
+      const plan \= JSON.parse(responseContent);  
+      if (\!plan.steps || \!Array.isArray(plan.steps)) {  
+        throw new Error('LLM response is missing a valid "steps" array.');  
+      }  
+      return plan.steps;  
+  } catch (e) {  
+      console.error("Failed to parse execution plan from LLM.", e);  
+      throw new Error("Could not parse the execution plan from the LLM response.");  
+  }  
+}
 
-  it('should have correct required fields for HttpAction', () \=\> {  
-    const definitionName \= Object.keys(schema.definitions?.Capability.definitions || {}).find(k \=\> k \=== 'HttpAction');  
-    const definition \= schema.definitions?.Capability.definitions\[definitionName\!\];  
-    const expected \= \['type', 'method', 'urlTemplate', 'parameterMapping'\];  
-    expect(definition).toBeDefined();  
-    assertRequiredProperties(definition, expected);  
-  });
+3. **Refactor the main execution loop.**  
+   * Remove the old analyzePromptComplexity function entirely.  
+   * The main loop will now call createExecutionPlan *once* at the beginning to get the full list of steps. It will then iterate through this structured plan and execute each action.
 
-  it('should have correct required fields for Policy', () \=\> {  
-    const definition \= schema.definitions?.Policy;  
-    // Policy itself is optional, but if present, it has no required fields at its top level.  
-    const expected: string\[\] \= \[\];  
-    expect(definition).toBeDefined();  
-    assertRequiredProperties(definition, expected);  
-  });
+// In agent.ts, refactor the main() function  
+async function main() {  
+    const url \= process.argv\[2\];  
+    const prompt \= process.argv\[3\];  
+    // ... (error handling for url/prompt)
 
-});
+    try {  
+        cookieJar \= await loadCookieJar();  
+        client.defaults.jar \= cookieJar;
 
-2. **Run the test suite.**  
-   * This new test will now be automatically included when you run pnpm test. It will fail if, for example, a developer removes the ? from policy?: Policy in src/index.ts but forgets to update the test, or if the schema generator produces an unexpected result. This enforces deliberate and synchronized changes.
+        const manifest \= await fetchManifest(url);
 
-## **Conclusion**
+        // Get the full plan ONCE at the beginning.  
+        // We can pass an initial state if we have one.  
+        const executionPlan \= await createExecutionPlan(manifest, prompt, null);
 
-By implementing these four steps, the AURA project will be more robust, maintainable, and developer-friendly. Decoupling permissions and adding schema synchronization tests remove potential sources of critical bugs, while the other changes improve code clarity, making it easier for new contributors to understand the system's architecture and intent.
+        let currentState: AuraState | null \= null;  
+        const allResults: any\[\] \= \[\];
+
+        for (let i \= 0; i \< executionPlan.length; i++) {  
+            const step \= executionPlan\[i\];  
+            const { capabilityId, args } \= step;
+
+            console.log(\`\\n--- Step ${i \+ 1}/${executionPlan.length}: Executing "${capabilityId}" \---\`);
+
+            // No need to plan again, just execute\!  
+            const result \= await executeAction(url, manifest, capabilityId, args, i \+ 1, executionPlan.length);
+
+            // ... (rest of the loop for handling results and state remains the same)  
+            currentState \= result.state;  
+            if (result.status \>= 400\) {  
+              // ... (handle failure and break loop)  
+            }  
+        }
+
+        // ... (final summary logic)
+
+    } catch (error) {  
+        console.error("\\n❌ An error occurred:", (error as Error).message);  
+    }  
+}
+
+By following these two major refactoring steps, your AURA agent will become stateful, robust, and significantly more capable of handling real-world, multi-step tasks.

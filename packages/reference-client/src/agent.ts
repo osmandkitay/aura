@@ -5,34 +5,155 @@ import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import OpenAI from 'openai';
 import { AuraManifest, AuraState } from '@aura/protocol';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+import Ajv from 'ajv';
+
+// Define persistent storage path for cookies
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const COOKIE_FILE_PATH = path.join(__dirname, '.aura-cookies.json');
 
 // Enable cookie support
-const cookieJar = new CookieJar();
+let cookieJar: CookieJar = new CookieJar();
 const client = wrapper(axios.create({
   jar: cookieJar,
   withCredentials: true,
 }));
 
+/**
+ * Loads the CookieJar from the persistent file.
+ * Returns a new CookieJar if the file doesn't exist or cannot be read.
+ */
+async function loadCookieJar(): Promise<CookieJar> {
+  try {
+    if (fs.existsSync(COOKIE_FILE_PATH)) {
+      const cookieJson = await fs.promises.readFile(COOKIE_FILE_PATH, 'utf-8');
+      const deserializedJar = JSON.parse(cookieJson);
+      return CookieJar.fromJSON(deserializedJar);
+    }
+  } catch (error) {
+    console.warn('[State] Could not load cookies, starting a new session.', error);
+  }
+  return new CookieJar();
+}
+
+/**
+ * Saves the CookieJar to the persistent file.
+ */
+async function saveCookieJar(jar: CookieJar): Promise<void> {
+  try {
+    const cookieJson = JSON.stringify(jar.toJSON(), null, 2);
+    await fs.promises.writeFile(COOKIE_FILE_PATH, cookieJson, 'utf-8');
+  } catch (error) {
+    console.error('[State] Failed to save cookies.', error);
+  }
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
- * Fetches the AURA manifest from a given base URL.
+ * Loads and compiles the AURA JSON Schema for validation.
+ */
+function loadAuraSchema() {
+    const schemaPath = path.join(__dirname, '../../aura-protocol/dist/aura-v1.0.schema.json');
+    
+    if (!fs.existsSync(schemaPath)) {
+        throw new Error(`AURA schema not found at ${schemaPath}. Please run 'pnpm build' in the aura-protocol package.`);
+    }
+    
+    const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+    const schema = JSON.parse(schemaContent);
+    
+    const ajv = new Ajv({
+        allErrors: true,
+        verbose: true,
+        strict: false // Allow additional keywords from TypeScript JSON Schema
+    });
+    
+    return ajv.compile(schema);
+}
+
+/**
+ * Fetches the AURA manifest from a given base URL with comprehensive error handling and validation.
  */
 async function fetchManifest(baseUrl: string): Promise<AuraManifest> {
     const manifestUrl = `${baseUrl}/.well-known/aura.json`;
     console.log(`[1/X] Fetching AURA manifest from ${manifestUrl}...`);
-    const response = await client.get<AuraManifest>(manifestUrl);
-    console.log(`[1/X] Success. Site: ${response.data.site.name}`);
-    return response.data;
+    
+    try {
+        // Make the HTTP request with proper error handling
+        const response = await client.get<AuraManifest>(manifestUrl, {
+            timeout: 10000, // 10 second timeout
+            validateStatus: (status) => status >= 200 && status < 300 // Only accept success codes
+        });
+        
+        // Validate response content type
+        const contentType = response.headers['content-type'];
+        if (!contentType || !contentType.includes('application/json')) {
+            console.warn(`[1/X] Warning: Unexpected content type: ${contentType}`);
+        }
+        
+        // Validate the manifest against JSON Schema
+        const validateSchema = loadAuraSchema();
+        const isValid = validateSchema(response.data);
+        
+        if (!isValid) {
+            console.error(`[1/X] ❌ Manifest validation failed:`);
+            validateSchema.errors?.forEach((error) => {
+                const instancePath = error.instancePath || '/';
+                console.error(`  - ${instancePath}: ${error.message}`);
+            });
+            throw new Error(`Invalid AURA manifest: Schema validation failed`);
+        }
+        
+        console.log(`[1/X] ✅ Success. Site: ${response.data.site.name}`);
+        console.log(`[1/X] ✅ Manifest validated successfully`);
+        
+        return response.data;
+        
+    } catch (error: any) {
+        // Handle different types of errors with specific messages
+        if (error.code === 'ECONNREFUSED') {
+            throw new Error(`Connection refused: Cannot reach server at ${baseUrl}. Is the server running?`);
+        } else if (error.code === 'ENOTFOUND') {
+            throw new Error(`Host not found: ${baseUrl}. Please check the URL.`);
+        } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+            throw new Error(`Request timeout: Server at ${baseUrl} took too long to respond.`);
+        } else if (error.response) {
+            // Server responded with error status
+            const status = error.response.status;
+            const statusText = error.response.statusText;
+            
+            if (status === 404) {
+                throw new Error(`AURA manifest not found at ${manifestUrl}. This site may not support the AURA protocol.`);
+            } else if (status === 403) {
+                throw new Error(`Access forbidden: Cannot access AURA manifest at ${manifestUrl}.`);
+            } else if (status >= 500) {
+                throw new Error(`Server error (${status}): ${statusText}. Please try again later.`);
+            } else {
+                throw new Error(`HTTP error (${status}): ${statusText}`);
+            }
+        } else if (error.message.includes('Invalid AURA manifest')) {
+            // Re-throw validation errors as-is
+            throw error;
+        } else if (error.message.includes('JSON')) {
+            throw new Error(`Invalid JSON response from ${manifestUrl}. The server may not be returning valid AURA manifest.`);
+        } else {
+            // Generic error
+            throw new Error(`Failed to fetch AURA manifest from ${manifestUrl}: ${error.message}`);
+        }
+    }
 }
 
 /**
- * Uses an LLM to decide which capability to use based on a user prompt.
+ * Creates a complete execution plan for a user prompt, breaking it down into structured steps.
+ * Each step contains both the capability to execute and its arguments.
  */
-async function planAction(manifest: AuraManifest, prompt: string, state?: AuraState | null): Promise<{ capabilityId: string; args: any; }> {
-    console.log(`[Planning] Analyzing prompt: "${prompt}"`);
-    
-    // Filter available capabilities based on current state
+async function createExecutionPlan(manifest: AuraManifest, prompt: string, state?: AuraState | null): Promise<{ capabilityId: string; args: any; }[]> {
+    console.log(`[Planning] Creating execution plan for prompt: "${prompt}"`);
+
     const availableCapabilities = state?.capabilities || Object.keys(manifest.capabilities);
     const tools = availableCapabilities.map(capId => {
         const cap = manifest.capabilities[capId];
@@ -47,108 +168,80 @@ async function planAction(manifest: AuraManifest, prompt: string, state?: AuraSt
         };
     }).filter(Boolean);
 
+    // Add a special planning function that returns structured execution plan
+    const planningTool = {
+        type: 'function' as const,
+        function: {
+            name: 'create_execution_plan',
+            description: 'Creates a structured execution plan with multiple steps',
+            parameters: {
+                type: 'object',
+                properties: {
+                    steps: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                capabilityId: { type: 'string' },
+                                args: { type: 'object' }
+                            },
+                            required: ['capabilityId', 'args']
+                        }
+                    }
+                },
+                required: ['steps']
+            }
+        }
+    };
+
     const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
             {
                 role: 'system',
-                content: `You are an AI agent controller. Your task is to select the single best capability to fulfill the user's request. 
+                content: `You are an AI agent controller. Your task is to analyze the user's request and break it down into a sequence of executable steps.
+                
+                If the request requires multiple steps, use the create_execution_plan function to return a structured plan.
+                If the request is a single step, you can either use create_execution_plan with one step, or call the capability directly.
+                
                 Current site state: ${JSON.stringify(state, null, 2)}
-                Available capabilities: ${availableCapabilities.join(', ')}`
+                Available capabilities: ${availableCapabilities.join(', ')}
+                
+                Each step should contain:
+                - capabilityId: the name of the capability to execute
+                - args: an object containing the parameters for that capability
+                
+                Break down complex requests like "login and create a post" into separate steps.`
             },
             { role: 'user', content: prompt }
         ],
-        tools: tools as any,
+        tools: [planningTool, ...tools] as any,
         tool_choice: 'auto',
     });
 
     const toolCall = completion.choices[0].message.tool_calls?.[0];
     if (!toolCall) {
-        throw new Error("LLM did not select a capability to execute.");
+        throw new Error("LLM failed to generate an execution plan.");
     }
 
-    console.log(`[Planning] Selected capability: ${toolCall.function.name}`);
-    return {
-        capabilityId: toolCall.function.name,
-        args: JSON.parse(toolCall.function.arguments),
-    };
+    console.log(`[Planning] LLM selected tool: ${toolCall.function.name}`);
+    
+    if (toolCall.function.name === 'create_execution_plan') {
+        // Multi-step plan
+        const planData = JSON.parse(toolCall.function.arguments);
+        console.log(`[Planning] Multi-step plan generated with ${planData.steps.length} steps`);
+        return planData.steps;
+    } else {
+        // Single step - capability called directly
+        console.log(`[Planning] Single-step plan: ${toolCall.function.name}`);
+        return [{
+            capabilityId: toolCall.function.name,
+            args: JSON.parse(toolCall.function.arguments),
+        }];
+    }
 }
 
-/**
- * Detects if a prompt requires multiple steps and breaks it down
- */
-async function analyzePromptComplexity(prompt: string): Promise<string[]> {
-    console.log(`[Analysis] Checking if prompt requires multiple steps...`);
-    
-    // Simple pattern-based detection for common multi-step patterns
-    const loginThenCreatePattern = /login.*(?:and|then|,).*(?:create|post|add)/i;
-    
-    if (loginThenCreatePattern.test(prompt)) {
-        console.log(`[Analysis] Detected login + create pattern`);
-        
-        // Extract email and password for login
-        const emailMatch = prompt.match(/email\s+([^\s]+)/i);
-        const passwordMatch = prompt.match(/password\s+([^\s,]+)/i);
-        
-        // Extract title and content for post
-        const titleMatch = prompt.match(/title\s+['"]([^'"]+)['"]/i);
-        const contentMatch = prompt.match(/content\s+['"]([^'"]+)['"]/i);
-        
-        if (emailMatch && passwordMatch) {
-            const loginStep = `login with email ${emailMatch[1]} and password ${passwordMatch[1]}`;
-            
-            let createStep = 'create a new blog post';
-            if (titleMatch && contentMatch) {
-                createStep = `create a new blog post with title "${titleMatch[1]}" and content "${contentMatch[1]}"`;
-            } else if (titleMatch) {
-                createStep = `create a new blog post with title "${titleMatch[1]}"`;
-            }
-            
-            const steps = [loginStep, createStep];
-            console.log(`[Analysis] Broken down into ${steps.length} steps:`, steps);
-            return steps;
-        }
-    }
-    
-    // Simple heuristics for other multi-step patterns
-    const multiStepIndicators = [
-        /(?:first|1\.)\s*\w+.*(?:second|2\.|then|next)/i,
-        /\w+.*(?:and then|then)\s*\w+/i
-    ];
-    
-    const hasMultipleSteps = multiStepIndicators.some(pattern => pattern.test(prompt));
-    
-    if (hasMultipleSteps) {
-        console.log(`[Analysis] Multi-step operation detected, falling back to LLM parsing`);
-        
-        // Use LLM to break down complex prompts
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: 'system',
-                    content: `Break down this user request into 2-3 ordered steps that can be accomplished via API calls. Each step should be a single action like "login with credentials" or "create blog post with title X". Return only the steps as a JSON array of strings.`
-                },
-                { role: 'user', content: prompt }
-            ],
-        });
-        
-        try {
-            const response = completion.choices[0].message.content;
-            const steps = JSON.parse(response || '[]');
-            
-            if (Array.isArray(steps) && steps.length > 1 && steps.length <= 3) {
-                console.log(`[Analysis] LLM broke down into ${steps.length} steps:`, steps);
-                return steps;
-            }
-        } catch (error) {
-            console.log(`[Analysis] Failed to parse LLM steps, treating as single step`);
-        }
-    }
-    
-    console.log(`[Analysis] Single-step operation detected`);
-    return [prompt];
-}
+
 
 /**
  * Prepares the URL path by expanding path parameters (e.g., /posts/{id}) and
@@ -262,6 +355,9 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
         validateStatus: () => true, // Accept all status codes
     });
 
+    // Save the state of the cookie jar after the request
+    await saveCookieJar(cookieJar);
+
     const auraStateHeader = response.headers['aura-state'];
     let auraState: AuraState | null = null;
     if (auraStateHeader) {
@@ -283,25 +379,31 @@ async function main() {
     }
 
     try {
+        // Load persistent cookie jar
+        cookieJar = await loadCookieJar();
+        client.defaults.jar = cookieJar;
+
         const manifest = await fetchManifest(url);
         
-        // Analyze if this is a multi-step operation
-        const steps = await analyzePromptComplexity(prompt);
+        // Get the full execution plan ONCE at the beginning
+        const executionPlan = await createExecutionPlan(manifest, prompt, null);
         
         let currentState: AuraState | null = null;
         const allResults: any[] = [];
         
-        for (let i = 0; i < steps.length; i++) {
-            const step = steps[i];
-            console.log(`\n--- Step ${i + 1}/${steps.length}: "${step}" ---`);
+        for (let i = 0; i < executionPlan.length; i++) {
+            const step = executionPlan[i];
+            const { capabilityId, args } = step;
             
-            const { capabilityId, args } = await planAction(manifest, step, currentState);
-            const result = await executeAction(url, manifest, capabilityId, args, i + 1, steps.length);
+            console.log(`\n--- Step ${i + 1}/${executionPlan.length}: Executing "${capabilityId}" ---`);
+            
+            // No need to plan again, just execute!
+            const result = await executeAction(url, manifest, capabilityId, args, i + 1, executionPlan.length);
             
             allResults.push({
                 step: i + 1,
-                prompt: step,
                 capability: capabilityId,
+                args: args,
                 status: result.status,
                 data: result.data,
                 state: result.state
@@ -313,7 +415,7 @@ async function main() {
             console.log(`Step ${i + 1} Status:`, result.status);
             if (result.status >= 400) {
                 console.log(`Step ${i + 1} Error:`, JSON.stringify(result.data, null, 2));
-                if (steps.length > 1) {
+                if (executionPlan.length > 1) {
                     console.log(`\n❌ Multi-step operation failed at step ${i + 1}. Stopping execution.`);
                     break;
                 }
@@ -322,7 +424,7 @@ async function main() {
             }
             
             // Brief pause between steps
-            if (i < steps.length - 1) {
+            if (i < executionPlan.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }

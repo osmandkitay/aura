@@ -1,0 +1,22 @@
+{
+  "version": "tough-cookie@5.1.2",
+  "storeType": "MemoryCookieStore",
+  "rejectPublicSuffixes": true,
+  "enableLooseMode": false,
+  "allowSpecialUseDomain": true,
+  "prefixSecurity": "silent",
+  "cookies": [
+    {
+      "key": "auth-token",
+      "value": "MToxNzUyNDMzODI0MTMz",
+      "maxAge": 604800,
+      "domain": "localhost",
+      "path": "/",
+      "httpOnly": true,
+      "hostOnly": true,
+      "creation": "2025-07-13T14:55:01.731Z",
+      "lastAccessed": "2025-07-13T19:10:24.645Z",
+      "sameSite": "lax"
+    }
+  ]
+}

@@ -51,6 +51,9 @@ importers:
       '@aura/protocol':
         specifier: workspace:*
         version: link:../aura-protocol
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
       axios:
         specifier: ^1.7.2
         version: 1.10.0
