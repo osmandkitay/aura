@@ -212,7 +212,9 @@ describe('AURA Integration Tests', () => {
       
       // Check if cookie was set
       const cookies = await cookieJar.getCookies(serverUrl);
+      console.log('All cookies:', cookies.map(c => ({ key: c.key, value: c.value, domain: c.domain, path: c.path })));
       const authCookie = cookies.find(cookie => cookie.key === 'auth-token');
+      console.log('Auth cookie found:', authCookie ? { key: authCookie.key, value: authCookie.value } : 'NOT FOUND');
       expect(authCookie).toBeDefined();
       expect(authCookie?.value).toBeTruthy();
     });
@@ -262,10 +264,14 @@ describe('AURA Integration Tests', () => {
       }));
 
       // First login
-      await client.post(`${serverUrl}/api/auth/login`, {
+      const loginResponse = await client.post(`${serverUrl}/api/auth/login`, {
         email: 'demo@aura.dev',
         password: 'password123'
       });
+      
+      // Verify login was successful
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data.success).toBe(true);
 
       // Then make a request to check state
       const response = await client.get(`${serverUrl}/api/posts`);

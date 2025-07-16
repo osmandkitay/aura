@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { posts } from '../../../lib/db';
+import { authenticateRequest } from '../../../lib/permissions';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Check authentication for protected operations
-  const authToken = req.cookies['auth-token'];
-  const isAuthenticated = !!authToken;
+  const { isAuthenticated, userId } = authenticateRequest(req);
 
   switch (req.method) {
     case 'GET':

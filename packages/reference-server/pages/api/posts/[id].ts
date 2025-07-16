@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { posts } from '../../../lib/db';
+import { authenticateRequest } from '../../../lib/permissions';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
-  const authToken = req.cookies['auth-token'];
-  const isAuthenticated = !!authToken;
+  const { isAuthenticated, userId } = authenticateRequest(req);
 
   // Find the post
   const postIndex = posts.findIndex((p) => p.id === id);

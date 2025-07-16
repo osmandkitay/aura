@@ -23,10 +23,30 @@ export function middleware(request: NextRequest) {
   // Get the response
   const response = NextResponse.next();
 
-  // Get session/auth info (in a real app, this would come from session/JWT)
-  // Check for auth-token cookie more reliably
+  // Get session/auth info using the same logic as API routes
   const authCookie = request.cookies.get('auth-token');
-  const isAuthenticated = !!(authCookie && authCookie.value && authCookie.value.length > 0);
+  let isAuthenticated = false;
+  
+  if (authCookie && authCookie.value) {
+    try {
+      // Decode the auth token (format: base64(userId:timestamp))
+      const decoded = Buffer.from(authCookie.value, 'base64').toString('utf-8');
+      const [userId, timestamp] = decoded.split(':');
+      
+      if (userId && timestamp) {
+        // Check if token is not too old (1 week)
+        const tokenAge = Date.now() - parseInt(timestamp);
+        const maxAge = 60 * 60 * 24 * 7 * 1000; // 1 week in ms
+        
+        if (tokenAge <= maxAge) {
+          isAuthenticated = true;
+        }
+      }
+    } catch (error) {
+      // Invalid token format
+      isAuthenticated = false;
+    }
+  }
   
   // Determine available capabilities dynamically based on the permission map
   const capabilities = ALL_CAPABILITIES.filter(capId => {

@@ -30,20 +30,23 @@ jobs:
     
     - name: Install dependencies
       run: pnpm install
-    
+
+    - name: Build aura-protocol first
+      run: pnpm --filter aura-protocol build
+
     - name: Build packages
       run: pnpm build 
 
     - name: Run unit & integration tests
       run: |
         pnpm --filter aura-reference-server start &
-        # Wait for the server to start
-        sleep 20
+        # Wait for the server to be ready with health check
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/posts > /dev/null 2>&1; do sleep 2; done'
         pnpm test
 
     - name: Run End-to-End Tests
       run: |
         pnpm --filter aura-reference-server start &
-        # Wait for the server to be ready
-        sleep 20
+        # Wait for the server to be ready with health check
+        timeout 60 bash -c 'until curl -f http://localhost:3000/api/posts > /dev/null 2>&1; do sleep 2; done'
         pnpm --filter aura-reference-client test-workflow http://localhost:3000 

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { authenticateRequest } from '../../../lib/permissions';
 
 // Mock user profiles
 const userProfiles: Record<string, unknown> = {
@@ -13,8 +14,8 @@ const userProfiles: Record<string, unknown> = {
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Check authentication
-  const authToken = req.cookies['auth-token'];
-  if (!authToken) {
+  const { isAuthenticated, userId } = authenticateRequest(req);
+  if (!isAuthenticated || !userId) {
     res.status(401).json({
       code: 'UNAUTHORIZED',
       detail: 'Authentication required',
@@ -23,10 +24,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  // Decode token to get user ID (simplified for demo)
-  const userId = authToken ? Buffer.from(authToken, 'base64').toString().split(':')[0] : null;
-  
-  if (!userId || !userProfiles[userId]) {
+  if (!userProfiles[userId]) {
     res.status(401).json({
       code: 'INVALID_TOKEN',
       detail: 'Invalid authentication token',
