@@ -36,3 +36,10 @@ jobs:
 
     - name: Run tests
       run: pnpm test 
+
+    - name: Run End-to-End Tests
+      run: |
+        pnpm --filter aura-reference-server start &
+        # Wait for the server to be ready
+        sleep 20
+        pnpm --filter aura-reference-client test-workflow http://localhost:3000 

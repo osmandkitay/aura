@@ -35,23 +35,23 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       break;
 
     case 'POST':
-      // Validate required fields first, before checking authentication
+      // Create post - requires authentication (check first for security)
+      if (!isAuthenticated) {
+        res.status(401).json({
+          code: 'UNAUTHORIZED',
+          detail: 'Authentication required',
+          hint: 'Please login first',
+        });
+        return;
+      }
+
+      // Validate required fields after authentication
       const { title, content, tags: newTags = [], published = false } = req.body;
       
       if (!title || !content) {
         res.status(400).json({
           code: 'VALIDATION_ERROR',
           detail: 'Title and content are required',
-        });
-        return;
-      }
-
-      // Create post - requires authentication
-      if (!isAuthenticated) {
-        res.status(401).json({
-          code: 'UNAUTHORIZED',
-          detail: 'Authentication required',
-          hint: 'Please login first',
         });
         return;
       }

@@ -47,6 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Verify password
   const isValidPassword = await bcrypt.compare(password, user.passwordHash);
   if (!isValidPassword) {
+    // Log the security event
+    console.warn(`[SECURITY_AUDIT] Failed login attempt for email: ${email}`);
+    
     res.status(401).json({
       code: 'INVALID_CREDENTIALS',
       detail: 'Invalid email or password',

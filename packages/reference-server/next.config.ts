@@ -1,4 +1,27 @@
 import type { NextConfig } from "next";
+// Define global security headers to mitigate common web vulnerabilities
+const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    // Restrict sources to self and allow inline styles / eval only where absolutely necessary for reference app
+    value: "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; img-src 'self' data:;",
+  },
+  {
+    key: 'Strict-Transport-Security',
+    // Enforce HTTPS for two years including sub-domains and allow preload list inclusion
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'X-Frame-Options',
+    // Prevent clickjacking by disallowing the site from being framed
+    value: 'SAMEORIGIN',
+  },
+  {
+    key: 'Referrer-Policy',
+    // Limit the amount of referrer information leaked during navigation
+    value: 'origin-when-cross-origin',
+  },
+];
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -11,6 +34,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
       {
         source: '/.well-known/aura.json',
         headers: [

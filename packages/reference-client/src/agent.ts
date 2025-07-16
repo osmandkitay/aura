@@ -53,6 +53,14 @@ async function saveCookieJar(jar: CookieJar): Promise<void> {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// === Step 2 Enhancement Constants ===
+const PLANNING_TOOL_VERSION = '1.0';
+const MAX_OPENAI_RETRIES = 3;
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * Loads and compiles the AURA JSON Schema for validation.
  */
@@ -168,12 +176,12 @@ async function createExecutionPlan(manifest: AuraManifest, prompt: string, state
         };
     }).filter(Boolean);
 
-    // Add a special planning function that returns structured execution plan
+    // Canonical planning function definition (with versioning)
     const planningTool = {
         type: 'function' as const,
         function: {
             name: 'create_execution_plan',
-            description: 'Creates a structured execution plan with multiple steps',
+            description: `Creates a structured execution plan with multiple steps (v${PLANNING_TOOL_VERSION})`,
             parameters: {
                 type: 'object',
                 properties: {
@@ -194,51 +202,41 @@ async function createExecutionPlan(manifest: AuraManifest, prompt: string, state
         }
     };
 
-    const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-            {
-                role: 'system',
-                content: `You are an AI agent controller. Your task is to analyze the user's request and break it down into a sequence of executable steps.
-                
-                If the request requires multiple steps, use the create_execution_plan function to return a structured plan.
-                If the request is a single step, you can either use create_execution_plan with one step, or call the capability directly.
-                
-                Current site state: ${JSON.stringify(state, null, 2)}
-                Available capabilities: ${availableCapabilities.join(', ')}
-                
-                Each step should contain:
-                - capabilityId: the name of the capability to execute
-                - args: an object containing the parameters for that capability
-                
-                Break down complex requests like "login and create a post" into separate steps.`
-            },
-            { role: 'user', content: prompt }
-        ],
-        tools: [planningTool, ...tools] as any,
-        tool_choice: 'auto',
-    });
-
-    const toolCall = completion.choices[0].message.tool_calls?.[0];
-    if (!toolCall) {
-        throw new Error("LLM failed to generate an execution plan.");
+    // Retry logic for the OpenAI call
+    let completion: OpenAI.Chat.Completions.ChatCompletion;
+    for (let attempt = 1; attempt <= MAX_OPENAI_RETRIES; attempt++) {
+        try {
+            completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are an AI agent controller (v${PLANNING_TOOL_VERSION}). You MUST use the create_execution_plan(version:${PLANNING_TOOL_VERSION}) function to return a structured plan for the user's request.\n\nCurrent site state: ${JSON.stringify(state, null, 2)}\nAvailable capabilities: ${availableCapabilities.join(', ')}\nEach step should contain:\n- capabilityId: the name of the capability to execute\n- args: an object containing the parameters for that capability`
+                    },
+                    { role: 'user', content: prompt }
+                ],
+                tools: [planningTool, ...tools] as any,
+                tool_choice: { type: 'function', function: { name: 'create_execution_plan' } } as any,
+            });
+            break; // success
+        } catch (error) {
+            console.warn(`[Planning] OpenAI call failed on attempt ${attempt}/${MAX_OPENAI_RETRIES}.`, (error as Error).message);
+            if (attempt === MAX_OPENAI_RETRIES) {
+                throw error;
+            }
+            // Exponential backoff
+            await sleep(1000 * attempt);
+        }
     }
 
-    console.log(`[Planning] LLM selected tool: ${toolCall.function.name}`);
-    
-    if (toolCall.function.name === 'create_execution_plan') {
-        // Multi-step plan
-        const planData = JSON.parse(toolCall.function.arguments);
-        console.log(`[Planning] Multi-step plan generated with ${planData.steps.length} steps`);
-        return planData.steps;
-    } else {
-        // Single step - capability called directly
-        console.log(`[Planning] Single-step plan: ${toolCall.function.name}`);
-        return [{
-            capabilityId: toolCall.function.name,
-            args: JSON.parse(toolCall.function.arguments),
-        }];
+    const toolCall = completion!.choices[0].message.tool_calls?.[0];
+    if (!toolCall || toolCall.function.name !== 'create_execution_plan') {
+        throw new Error('LLM failed to generate an execution plan using the required create_execution_plan function.');
     }
+
+    const planData = JSON.parse(toolCall.function.arguments);
+    console.log(`[Planning] Execution plan generated with ${planData.steps.length} steps`);
+    return planData.steps;
 }
 
 
@@ -386,7 +384,14 @@ async function main() {
         const manifest = await fetchManifest(url);
         
         // Get the full execution plan ONCE at the beginning
-        const executionPlan = await createExecutionPlan(manifest, prompt, null);
+        let executionPlan:
+          { capabilityId: string; args: any }[] | undefined;
+        try {
+          executionPlan = await createExecutionPlan(manifest, prompt, null);
+        } catch (error) {
+          console.error('Failed to create an execution plan after multiple retries.', error);
+          throw error; // Re-throw to be caught by outer catch
+        }
         
         let currentState: AuraState | null = null;
         const allResults: any[] = [];

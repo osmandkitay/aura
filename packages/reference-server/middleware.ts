@@ -2,7 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ALL_CAPABILITIES, CAPABILITY_PERMISSIONS } from './lib/permissions'; // Import the new config
 
+// Rate limiting configuration
+const ipRequestCounts = new Map<string, number>();
+const RATE_LIMIT = 100; // 100 requests
+const WINDOW_MS = 60 * 1000; // per minute
+
 export function middleware(request: NextRequest) {
+  // Rate limiting check
+  const ip = request.headers.get('x-forwarded-for') ?? 
+             request.headers.get('x-real-ip') ?? 
+             '127.0.0.1';
+  const count = ipRequestCounts.get(ip) || 0;
+
+  if (count >= RATE_LIMIT) {
+    return new NextResponse('Too many requests', { status: 429 });
+  }
+
+  ipRequestCounts.set(ip, count + 1);
+  setTimeout(() => ipRequestCounts.delete(ip), WINDOW_MS);
   // Get the response
   const response = NextResponse.next();
 
