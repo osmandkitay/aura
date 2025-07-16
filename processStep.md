@@ -167,7 +167,7 @@ const nextConfig \= {
         \# Run the E2E test script  
         pnpm \--filter aura-reference-client test-workflow http://localhost:3000
 
-## **Step 5: Establish Community and Contribution Guidelines (New Recommendation)**
+## **Step 5: Establish Community and Contribution Guidelines**
 
 **Reasoning:** In line with the Aaron Swartz philosophy of building open, collaborative systems, providing clear documentation for contributors is essential. It lowers the barrier to entry, ensures quality, and fosters a healthy community.
 
