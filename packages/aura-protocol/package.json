@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "generate-schema": "ts-node scripts/generate-schema.ts",
-    "postbuild": "npm run generate-schema"
+    "postbuild": "pnpm run generate-schema"
   },
   "bin": {
     "aura-validate": "./dist/cli/aura-validate.js"

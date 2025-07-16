@@ -34,8 +34,12 @@ jobs:
     - name: Build packages
       run: pnpm build 
 
-    - name: Run tests
-      run: pnpm test 
+    - name: Run unit & integration tests
+      run: |
+        pnpm --filter aura-reference-server start &
+        # Wait for the server to start
+        sleep 20
+        pnpm test
 
     - name: Run End-to-End Tests
       run: |
