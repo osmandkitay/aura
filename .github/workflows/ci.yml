@@ -32,10 +32,15 @@ jobs:
       run: pnpm install
 
     - name: Build aura-protocol first
-      run: pnpm --filter aura-protocol build
+      run: |
+        pnpm --filter aura-protocol build
+        pnpm --filter aura-protocol generate-schema
 
     - name: Build packages
       run: pnpm build 
+
+    - name: Build reference-server for production
+      run: pnpm --filter aura-reference-server build
 
     - name: Run unit & integration tests
       run: |

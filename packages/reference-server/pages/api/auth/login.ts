@@ -63,10 +63,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Set cookie
   const cookie = serialize('auth-token', authToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Keep false for HTTP in testing
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: '/',
+    domain: undefined, // Let the browser handle domain automatically
   });
 
   res.setHeader('Set-Cookie', cookie);
