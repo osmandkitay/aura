@@ -33,10 +33,20 @@ jobs:
 
     - name: Build aura-protocol first
       run: |
-        pnpm --filter aura-protocol build
-        pnpm --filter aura-protocol generate-schema
+        cd packages/aura-protocol
+        npm run build
 
-    - name: Build packages
+    - name: Generate schema files
+      run: |
+        cd packages/aura-protocol
+        npm run generate-schema
+
+    - name: Verify schema files exist
+      run: |
+        ls -la packages/aura-protocol/dist/
+        test -f packages/aura-protocol/dist/aura-v1.0.schema.json
+
+    - name: Build all packages
       run: pnpm build 
 
     - name: Build reference-server for production

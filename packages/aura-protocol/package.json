@@ -5,8 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "generate-schema": "ts-node scripts/generate-schema.ts",
-    "postbuild": "pnpm run generate-schema"
+    "generate-schema": "ts-node scripts/generate-schema.ts"
   },
   "bin": {
     "aura-validate": "./dist/cli/aura-validate.js"

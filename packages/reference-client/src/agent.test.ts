@@ -461,10 +461,11 @@ describe('End-to-End Workflow Tests', () => {
       headers: authToken ? { Cookie: `auth-token=${authToken}` } : {}
     });
     expect(listResponse.status).toBe(200);
-    expect(Array.isArray(listResponse.data)).toBe(true);
+    expect(listResponse.data.posts).toBeDefined();
+    expect(Array.isArray(listResponse.data.posts)).toBe(true);
     
     // Verify our post is in the list
-    const createdPost = listResponse.data.find((p: any) => p.title === newPost.title);
+    const createdPost = listResponse.data.posts.find((p: any) => p.title === newPost.title);
     expect(createdPost).toBeDefined();
     expect(createdPost.content).toBe(newPost.content);
   });

@@ -48,6 +48,15 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       // Validate required fields after authentication
       const { title, content, tags: newTags = [], published = false } = req.body;
       
+      // Type validation
+      if (typeof title !== 'string' || typeof content !== 'string') {
+        res.status(400).json({
+          code: 'VALIDATION_ERROR',
+          detail: 'Title and content must be strings',
+        });
+        return;
+      }
+      
       if (!title || !content) {
         res.status(400).json({
           code: 'VALIDATION_ERROR',
