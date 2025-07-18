@@ -1,27 +1,36 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { posts } from '../../../lib/db';
 import { authenticateRequest } from '../../../lib/permissions';
+import { validateRequest } from '../../../lib/validator';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
   const { isAuthenticated, userId } = authenticateRequest(req);
-
-  // Find the post
-  const postIndex = posts.findIndex((p) => p.id === id);
-  const post = posts[postIndex];
-
-  if (!post) {
-    res.status(404).json({
-      code: 'NOT_FOUND',
-      detail: `Post with id ${id} not found`,
-    });
-    return;
-  }
 
   switch (req.method) {
     case 'GET':
       // Read post - available to all
-      res.status(200).json(post);
+      // Validate request against read_post capability schema
+      const readValidation = validateRequest(req, 'read_post');
+      if (!readValidation.isValid) {
+        res.status(400).json(readValidation.error);
+        return;
+      }
+
+      const { id: readId } = req.query;
+
+      // Find the post
+      const readPostIndex = posts.findIndex((p) => p.id === readId);
+      const readPost = posts[readPostIndex];
+
+      if (!readPost) {
+        res.status(404).json({
+          code: 'NOT_FOUND',
+          detail: `Post with id ${readId} not found`,
+        });
+        return;
+      }
+
+      res.status(200).json(readPost);
       break;
 
     case 'PUT':
@@ -35,13 +44,32 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
+      // Validate request against update_post capability schema
+      const updateValidation = validateRequest(req, 'update_post');
+      if (!updateValidation.isValid) {
+        res.status(400).json(updateValidation.error);
+        return;
+      }
 
+      const { id: updateId } = req.query;
+
+      // Find the post
+      const updatePostIndex = posts.findIndex((p) => p.id === updateId);
+      const updatePost = posts[updatePostIndex];
+
+      if (!updatePost) {
+        res.status(404).json({
+          code: 'NOT_FOUND',
+          detail: `Post with id ${updateId} not found`,
+        });
+        return;
+      }
 
       // Update post
       const { title, content, tags, published } = req.body;
       
       const updatedPost = {
-        ...post,
+        ...updatePost,
         ...(title !== undefined && { title }),
         ...(content !== undefined && { content }),
         ...(tags !== undefined && { tags }),
@@ -49,7 +77,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         updatedAt: new Date().toISOString(),
       };
 
-      posts[postIndex] = updatedPost;
+      posts[updatePostIndex] = updatedPost;
 
       res.status(200).json(updatedPost);
       break;
@@ -65,10 +93,28 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
+      // Validate request against delete_post capability schema
+      const deleteValidation = validateRequest(req, 'delete_post');
+      if (!deleteValidation.isValid) {
+        res.status(400).json(deleteValidation.error);
+        return;
+      }
 
+      const { id: deleteId } = req.query;
+
+      // Find the post
+      const deletePostIndex = posts.findIndex((p) => p.id === deleteId);
+
+      if (deletePostIndex === -1) {
+        res.status(404).json({
+          code: 'NOT_FOUND',
+          detail: `Post with id ${deleteId} not found`,
+        });
+        return;
+      }
 
       // Delete post
-      posts.splice(postIndex, 1);
+      posts.splice(deletePostIndex, 1);
 
       res.status(204).end();
       break;

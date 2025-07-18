@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serialize } from 'cookie';
 import * as bcrypt from 'bcryptjs';
+import { validateRequest } from '../../../lib/validator';
 
 // Mock user database with hashed passwords
 const users = [
@@ -22,16 +23,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const { email, password } = req.body;
-
-  // Validate input
-  if (!email || !password) {
-    res.status(400).json({
-      code: 'VALIDATION_ERROR',
-      detail: 'Email and password are required',
-    });
+  // Validate request against login capability schema
+  const validation = validateRequest(req, 'login');
+  if (!validation.isValid) {
+    res.status(400).json(validation.error);
     return;
   }
+
+  const { email, password } = req.body;
 
   // Find user by email
   const user = users.find(u => u.email === email);

@@ -26,11 +26,18 @@
         "POST": { "capabilityId": "create_post" }
       }
     },
-    "auth": {
+    "auth_login": {
       "uriPattern": "/api/auth/login",
-      "description": "Authentication endpoint",
+      "description": "Authentication login endpoint",
       "operations": {
         "POST": { "capabilityId": "login" }
+      }
+    },
+    "auth_logout": {
+      "uriPattern": "/api/auth/logout",
+      "description": "Authentication logout endpoint",
+      "operations": {
+        "POST": { "capabilityId": "logout" }
       }
     },
     "user_profile": {
@@ -250,6 +257,18 @@
           "email": "/email",
           "password": "/password"
         }
+      }
+    },
+    "logout": {
+      "id": "logout",
+      "v": 1,
+      "description": "Log out current user by clearing authentication token",
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/api/auth/logout",
+        "cors": true,
+        "parameterMapping": {}
       }
     },
     "get_profile": {

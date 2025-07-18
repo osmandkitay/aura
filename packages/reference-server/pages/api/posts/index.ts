@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { posts } from '../../../lib/db';
 import { authenticateRequest } from '../../../lib/permissions';
+import { validateRequest } from '../../../lib/validator';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Check authentication for protected operations
@@ -9,6 +10,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   switch (req.method) {
     case 'GET':
       // List posts - available to all
+      // Validate request against list_posts capability schema
+      const listValidation = validateRequest(req, 'list_posts');
+      if (!listValidation.isValid) {
+        res.status(400).json(listValidation.error);
+        return;
+      }
+
       const { limit = 100, offset = 0, tags } = req.query;
       
       let filteredPosts = [...posts];
@@ -45,25 +53,15 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
       }
 
-      // Validate required fields after authentication
+      // Validate request against create_post capability schema
+      const createValidation = validateRequest(req, 'create_post');
+      if (!createValidation.isValid) {
+        res.status(400).json(createValidation.error);
+        return;
+      }
+
+      // Extract validated data from request body
       const { title, content, tags: newTags = [], published = false } = req.body;
-      
-      // Type validation
-      if (typeof title !== 'string' || typeof content !== 'string') {
-        res.status(400).json({
-          code: 'VALIDATION_ERROR',
-          detail: 'Title and content must be strings',
-        });
-        return;
-      }
-      
-      if (!title || !content) {
-        res.status(400).json({
-          code: 'VALIDATION_ERROR',
-          detail: 'Title and content are required',
-        });
-        return;
-      }
 
       // Create new post
       const newPost = {

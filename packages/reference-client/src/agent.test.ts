@@ -12,7 +12,7 @@ vi.mock('openai', () => {
 // Ensure the OpenAI client can initialize in the agent module during tests
 process.env.NODE_ENV = 'test';
 process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-test-key';
-import { prepareUrlPath } from './agent';
+import { prepareUrlPath, mapParameters, resolveJsonPointer } from './agent';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
@@ -176,19 +176,214 @@ describe('AURA Agent Core Functions', () => {
       expect(result).toBe('/api/posts/123');
     });
 
-    it('should remove query parameter templates from URL', () => {
-      const result = prepareUrlPath('/api/posts{?limit,offset}', { limit: 10, offset: 0 });
-      expect(result).toBe('/api/posts');
+    it('should handle query parameter templates (RFC 6570 Level 3)', () => {
+      const result = prepareUrlPath('/api/posts{?limit,offset}', { limit: 10, offset: 20 });
+      expect(result).toBe('/api/posts?limit=10&offset=20');
     });
 
     it('should handle exploded array parameter templates', () => {
       const result = prepareUrlPath('/api/posts{?tags*}', { tags: ['tech', 'ai'] });
-      expect(result).toBe('/api/posts');
+      expect(result).toBe('/api/posts?tags=tech&tags=ai');
     });
 
     it('should handle mixed path and query parameters', () => {
       const result = prepareUrlPath('/api/posts/{id}{?include}', { id: '123', include: 'comments' });
-      expect(result).toBe('/api/posts/123');
+      expect(result).toBe('/api/posts/123?include=comments');
+    });
+
+    it('should handle reserved string expansion', () => {
+      const result = prepareUrlPath('{+base}/posts/{id}', { base: '/api/v1', id: '123' });
+      expect(result).toBe('/api/v1/posts/123');
+    });
+
+    it('should handle fragment expansion', () => {
+      const result = prepareUrlPath('/api/posts/{id}{#section}', { id: '123', section: 'comments' });
+      expect(result).toBe('/api/posts/123#comments');
+    });
+
+    it('should handle multiple variable expansion', () => {
+      const result = prepareUrlPath('/api/{controller,action}', { controller: 'posts', action: 'create' });
+      expect(result).toBe('/api/posts,create');
+    });
+
+    it('should handle complex query with multiple parameters', () => {
+      const result = prepareUrlPath('/api/search{?q,limit,tags*,sort}', { 
+        q: 'javascript', 
+        limit: 20, 
+        tags: ['web', 'dev'], 
+        sort: 'date' 
+      });
+      expect(result).toBe('/api/search?q=javascript&limit=20&tags=web&tags=dev&sort=date');
+    });
+
+    it('should fallback gracefully on invalid templates', () => {
+      const invalidTemplate = '/api/{unclosed';
+      const result = prepareUrlPath(invalidTemplate, { id: '123' });
+      expect(result).toBe(invalidTemplate); // Should return original template
+    });
+
+    it('should handle empty parameters gracefully', () => {
+      const result = prepareUrlPath('/api/posts{?limit,offset}', {});
+      expect(result).toBe('/api/posts');
+    });
+  });
+
+  describe('resolveJsonPointer', () => {
+    const testObj = {
+      email: 'user@example.com',
+      user: {
+        name: 'John Doe',
+        profile: {
+          avatar: 'avatar.jpg',
+          settings: {
+            theme: 'dark'
+          }
+        }
+      },
+      tags: ['javascript', 'web', 'development'],
+      items: [
+        { title: 'First Post', author: 'Alice' },
+        { title: 'Second Post', author: 'Bob' }
+      ],
+      'special/key': 'special value',
+      'tilde~key': 'tilde value'
+    };
+
+    it('should resolve simple property access', () => {
+      const result = resolveJsonPointer(testObj, '/email');
+      expect(result).toBe('user@example.com');
+    });
+
+    it('should resolve nested object access', () => {
+      const result = resolveJsonPointer(testObj, '/user/name');
+      expect(result).toBe('John Doe');
+    });
+
+    it('should resolve deep nested object access', () => {
+      const result = resolveJsonPointer(testObj, '/user/profile/settings/theme');
+      expect(result).toBe('dark');
+    });
+
+    it('should resolve array element access', () => {
+      const result = resolveJsonPointer(testObj, '/tags/0');
+      expect(result).toBe('javascript');
+    });
+
+    it('should resolve nested array object access', () => {
+      const result = resolveJsonPointer(testObj, '/items/1/author');
+      expect(result).toBe('Bob');
+    });
+
+    it('should handle escaped characters in keys', () => {
+      const result = resolveJsonPointer(testObj, '/special~1key');
+      expect(result).toBe('special value');
+    });
+
+    it('should handle tilde escape sequences', () => {
+      const result = resolveJsonPointer(testObj, '/tilde~0key');
+      expect(result).toBe('tilde value');
+    });
+
+    it('should return undefined for non-existent paths', () => {
+      const result = resolveJsonPointer(testObj, '/nonexistent/path');
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for out-of-bounds array access', () => {
+      const result = resolveJsonPointer(testObj, '/tags/10');
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle empty pointer (return root object)', () => {
+      const result = resolveJsonPointer(testObj, '');
+      expect(result).toBe(testObj);
+    });
+
+    it('should return undefined for invalid pointer format', () => {
+      const result = resolveJsonPointer(testObj, 'invalid');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('mapParameters with enhanced JSON Pointer support', () => {
+    const testArgs = {
+      email: 'user@example.com',
+      user: {
+        name: 'John Doe',
+        profile: {
+          avatar: 'avatar.jpg'
+        }
+      },
+      tags: ['javascript', 'web'],
+      items: [
+        { title: 'First Post' },
+        { title: 'Second Post' }
+      ]
+    };
+
+    it('should map simple properties', () => {
+      const mapping = {
+        userEmail: '/email'
+      };
+      const result = mapParameters(testArgs, mapping);
+      expect(result).toEqual({
+        userEmail: 'user@example.com'
+      });
+    });
+
+    it('should map nested object properties', () => {
+      const mapping = {
+        userName: '/user/name',
+        avatar: '/user/profile/avatar'
+      };
+      const result = mapParameters(testArgs, mapping);
+      expect(result).toEqual({
+        userName: 'John Doe',
+        avatar: 'avatar.jpg'
+      });
+    });
+
+    it('should map array elements', () => {
+      const mapping = {
+        firstTag: '/tags/0',
+        firstItemTitle: '/items/0/title'
+      };
+      const result = mapParameters(testArgs, mapping);
+      expect(result).toEqual({
+        firstTag: 'javascript',
+        firstItemTitle: 'First Post'
+      });
+    });
+
+    it('should ignore non-existent paths', () => {
+      const mapping = {
+        existingField: '/email',
+        nonExistentField: '/user/nonexistent'
+      };
+      const result = mapParameters(testArgs, mapping);
+      expect(result).toEqual({
+        existingField: 'user@example.com'
+      });
+    });
+
+    it('should handle complex mixed mappings', () => {
+      const mapping = {
+        email: '/email',
+        name: '/user/name',
+        avatar: '/user/profile/avatar',
+        primaryTag: '/tags/0',
+        secondaryTag: '/tags/1',
+        latestPostTitle: '/items/0/title'
+      };
+      const result = mapParameters(testArgs, mapping);
+      expect(result).toEqual({
+        email: 'user@example.com',
+        name: 'John Doe',
+        avatar: 'avatar.jpg',
+        primaryTag: 'javascript',
+        secondaryTag: 'web',
+        latestPostTitle: 'First Post'
+      });
     });
   });
 });
@@ -262,6 +457,17 @@ describe('AURA Integration Tests', () => {
 
       expect(loginResponse.status).toBe(401);
       expect(loginResponse.data.code).toBe('INVALID_CREDENTIALS');
+      
+      // Strengthen error shape validation - verify exact error response structure
+      expect(loginResponse.data).toHaveProperty('code');
+      expect(loginResponse.data).toHaveProperty('detail');
+      expect(typeof loginResponse.data.code).toBe('string');
+      expect(typeof loginResponse.data.detail).toBe('string');
+      // Ensure no unexpected properties in the error response
+      const expectedKeys = ['code', 'detail'];
+      const actualKeys = Object.keys(loginResponse.data);
+      const unexpectedKeys = actualKeys.filter(key => !expectedKeys.includes(key));
+      expect(unexpectedKeys.length).toBe(0);
     });
   });
 
@@ -362,6 +568,21 @@ describe('AURA Integration Tests', () => {
       
       expect(createPostResponse.status).toBe(401);
       expect(createPostResponse.data.code).toBe('UNAUTHORIZED');
+      
+      // Strengthen error shape validation - verify exact error response structure
+      expect(createPostResponse.data).toHaveProperty('code');
+      expect(createPostResponse.data).toHaveProperty('detail');
+      expect(typeof createPostResponse.data.code).toBe('string');
+      expect(typeof createPostResponse.data.detail).toBe('string');
+      // UNAUTHORIZED errors may include a 'hint' field
+      if ('hint' in createPostResponse.data) {
+        expect(typeof createPostResponse.data.hint).toBe('string');
+      }
+      // Ensure no unexpected properties in the error response
+      const expectedKeys = ['code', 'detail', 'hint'];
+      const actualKeys = Object.keys(createPostResponse.data);
+      const unexpectedKeys = actualKeys.filter(key => !expectedKeys.includes(key));
+      expect(unexpectedKeys.length).toBe(0);
     });
   });
 
@@ -393,6 +614,33 @@ describe('AURA Integration Tests', () => {
       
       expect(response.status).toBe(400);
       expect(response.data.code).toBe('VALIDATION_ERROR');
+      
+      // Strengthen error shape validation - verify exact ValidationErrorResponse structure
+      expect(response.data).toHaveProperty('code');
+      expect(response.data).toHaveProperty('detail');
+      expect(typeof response.data.code).toBe('string');
+      expect(typeof response.data.detail).toBe('string');
+      // ValidationErrorResponse may include an 'errors' array
+      if ('errors' in response.data) {
+        expect(Array.isArray(response.data.errors)).toBe(true);
+        // Verify each error object has the expected structure
+        response.data.errors.forEach((error: any) => {
+          expect(error).toHaveProperty('field');
+          expect(error).toHaveProperty('message');
+          expect(typeof error.field).toBe('string');
+          expect(typeof error.message).toBe('string');
+          // 'value' property is optional
+          if ('value' in error) {
+            // value can be of any type, so we just check it exists
+            expect(error.value).toBeDefined();
+          }
+        });
+      }
+      // Ensure no unexpected properties in the error response
+      const expectedKeys = ['code', 'detail', 'errors'];
+      const actualKeys = Object.keys(response.data);
+      const unexpectedKeys = actualKeys.filter(key => !expectedKeys.includes(key));
+      expect(unexpectedKeys.length).toBe(0);
     });
 
     it('should validate parameter types and constraints', async () => {

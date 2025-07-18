@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import Ajv from 'ajv';
+import { parseTemplate } from 'url-template';
 
 // Define persistent storage path for cookies
 const __filename = fileURLToPath(import.meta.url);
@@ -242,58 +243,91 @@ async function createExecutionPlan(manifest: AuraManifest, prompt: string, state
 
 
 /**
- * Prepares the URL path by expanding path parameters (e.g., /posts/{id}) and
- * stripping the query parameter template (e.g., {?limit,offset}).
- * Query parameters are handled separately during the request execution.
+ * Prepares the URL path by expanding URI templates using RFC 6570 compliant expansion.
+ * This now supports all levels of RFC 6570 URI Templates including query parameters,
+ * fragment expansion, path segments, and reserved string expansion.
  */
 export function prepareUrlPath(template: string, args: any): string {
-    let url = template;
-
-    // Remove any query parameter templates from the URL template
-    // (these will be handled by executeAction based on encoding/parameterMapping)
-    url = url.replace(/\{\?[^}]+\}/, '');
-
-    // Handle path parameters like {id}
-    Object.keys(args).forEach(paramKey => {
-        const paramValue = args[paramKey];
-        if (paramValue !== undefined) {
-            url = url.replace(`{${paramKey}}`, encodeURIComponent(paramValue));
-        }
-    });
-
-    return url;
+    try {
+        // Parse and expand the template using RFC 6570 compliant library
+        const uriTemplate = parseTemplate(template);
+        return uriTemplate.expand(args);
+    } catch (error) {
+        console.warn(`[URI Template] Failed to expand template "${template}":`, error);
+        // Fallback to original URL template if expansion fails
+        return template;
+    }
 }
 
 /**
  * Maps arguments from the LLM response to a new object based on the capability's
- * parameterMapping.
+ * parameterMapping using proper JSON Pointer syntax (RFC 6901).
  *
- * This function uses a simplified implementation of JSON Pointer syntax.
- * It currently only supports top-level, non-nested pointers.
- * For example:
+ * This function now supports full JSON Pointer syntax including nested pointers.
+ * Examples:
  * - `"/email"` maps to `args.email`
- * - `"/title"` maps to `args.title`
- *
- * Nested pointers like `"/user/name"` are not supported in this reference client.
+ * - `"/user/name"` maps to `args.user.name`
+ * - `"/items/0/title"` maps to `args.items[0].title`
+ * - `"/settings/theme/dark"` maps to `args.settings.theme.dark`
  *
  * @param args The arguments object, typically from the LLM.
  * @param parameterMapping The mapping from the capability definition.
  * @returns A new object with keys and values mapped for the HTTP request.
  */
-function mapParameters(args: any, parameterMapping: Record<string, string>): any {
+export function mapParameters(args: any, parameterMapping: Record<string, string>): any {
     const mapped: any = {};
     
     for (const [paramName, jsonPointer] of Object.entries(parameterMapping)) {
-        // Simple JSON Pointer implementation for basic cases like "/email", "/title", etc.
         if (jsonPointer.startsWith('/')) {
-            const key = jsonPointer.slice(1); // Remove leading "/"
-            if (args[key] !== undefined) {
-                mapped[paramName] = args[key];
+            const value = resolveJsonPointer(args, jsonPointer);
+            if (value !== undefined) {
+                mapped[paramName] = value;
             }
         }
     }
     
     return mapped;
+}
+
+/**
+ * Resolves a JSON Pointer path to its value in the given object.
+ * Implements RFC 6901 JSON Pointer specification.
+ * 
+ * @param obj The object to traverse
+ * @param pointer The JSON Pointer string (e.g., "/user/name" or "/items/0/title")
+ * @returns The resolved value or undefined if path doesn't exist
+ */
+export function resolveJsonPointer(obj: any, pointer: string): any {
+    if (pointer === '') return obj;
+    if (!pointer.startsWith('/')) return undefined;
+    
+    // Split path and decode special characters
+    const tokens = pointer.slice(1).split('/').map(token => {
+        // JSON Pointer escape sequences: ~1 becomes /, ~0 becomes ~
+        return token.replace(/~1/g, '/').replace(/~0/g, '~');
+    });
+    
+    let current = obj;
+    for (const token of tokens) {
+        if (current === null || current === undefined) {
+            return undefined;
+        }
+        
+        // Handle array indices and object properties
+        if (Array.isArray(current)) {
+            const index = parseInt(token, 10);
+            if (isNaN(index) || index < 0 || index >= current.length) {
+                return undefined;
+            }
+            current = current[index];
+        } else if (typeof current === 'object') {
+            current = current[token];
+        } else {
+            return undefined;
+        }
+    }
+    
+    return current;
 }
 
 /**
@@ -305,39 +339,52 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
     const capability = manifest.capabilities[capabilityId];
     if (!capability) throw new Error(`Capability ${capabilityId} not found.`);
 
-    // Expand URI template for path parameters only
-    const templateUrl = prepareUrlPath(capability.action.urlTemplate, args);
-    const fullUrl = `${baseUrl}${templateUrl}`;
+    // Map parameters if parameterMapping is defined
+    let parametersToUse = args;
+    if (capability.action.parameterMapping) {
+        parametersToUse = mapParameters(args, capability.action.parameterMapping);
+    }
 
-    // Determine request data and params based on encoding and parameterMapping
+    // Expand URI template with proper RFC 6570 support
+    const expandedUrl = prepareUrlPath(capability.action.urlTemplate, parametersToUse);
+    const fullUrl = `${baseUrl}${expandedUrl}`;
+
+    // Determine request data based on encoding
     let requestData: any = null;
     let queryParams: any = null;
 
-    if (capability.action.parameterMapping) {
-        // Use parameterMapping to map args to the request
-        const mappedParams = mapParameters(args, capability.action.parameterMapping);
+    // For URI templates that include query parameters (e.g., {?param1,param2}),
+    // the expansion already handles them, so we only send body data for non-GET methods
+    if (capability.action.encoding === 'json') {
+        // Send parameters in request body as JSON
+        requestData = parametersToUse;
+    } else if (capability.action.encoding === 'query') {
+        // For explicit query encoding, check if the URL already has query parameters
+        // If the URI template expansion created query parameters, don't send duplicates
+        const urlObj = new URL(fullUrl, baseUrl);
+        const urlHasQueryParams = urlObj.search !== '';
         
-        // Determine where to put the mapped parameters based on encoding
-        if (capability.action.encoding === 'json') {
-            // Send parameters in request body as JSON
-            requestData = mappedParams;
-        } else if (capability.action.encoding === 'query') {
-            // Send parameters as query string
-            queryParams = mappedParams;
-        } else {
-            // Fallback to method-based logic for capabilities without explicit encoding
-            if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
-                queryParams = mappedParams;
-            } else {
-                requestData = mappedParams;
-            }
+        if (!urlHasQueryParams) {
+            // Only send query params if the URL doesn't already have them from template expansion
+            queryParams = parametersToUse;
         }
+        // If URL already has query params from template expansion, don't send additional ones
     } else {
-        // Fallback for capabilities without parameterMapping (use raw args)
+        // Fallback to method-based logic for capabilities without explicit encoding
         if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
-            queryParams = args;
+            // For GET/DELETE, only use query params if not already in the URL template
+            const urlObj = new URL(fullUrl, baseUrl);
+            const hasQueryInTemplate = urlObj.search !== '';
+            
+            if (!hasQueryInTemplate) {
+                queryParams = parametersToUse;
+            }
         } else {
-            requestData = args;
+            // For POST/PUT, send as body unless query parameters are in the template
+            const hasQueryInTemplate = fullUrl.includes('?');
+            if (!hasQueryInTemplate) {
+                requestData = parametersToUse;
+            }
         }
     }
 

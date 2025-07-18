@@ -1,178 +1,118 @@
-# **AURA Project: Refinement and Hardening Plan (v2)**
+AURA Protocol: Implementation Refinement Plan
+This document outlines a series of focused improvements to enhance the robustness, clarity, and testability of the AURA reference implementation. The goal is to solidify the foundation, ensuring it is as error-free and maintainable as possible, in alignment with the project's core philosophy.
 
-This document outlines a series of recommended steps to further enhance the security, consistency, and elegance of the AURA project. The existing codebase is exceptionally well-structured and robust. These changes are designed to align the implementation even more closely with security best practices, clean architectural patterns, and long-term maintainability.
+------------------------------------------------
 
-## **Step 1: Harden API Endpoints with Layered Security** ✅
+✅ Step 1: Create Unit Tests for the Core Validation Utility
+Objective
+To create fast, isolated unit tests for the central validation logic in packages/reference-server/lib/validator.ts. While the existing integration tests are excellent for verifying the complete API flow, unit tests will allow us to test the validator's internal functions (like type conversion and error formatting) with precision and without the overhead of the Next.js server. This leads to more reliable code and faster feedback during development.
 
-The goal is to ensure all API endpoints verify a user's identity and permissions *before* processing their request and to protect them from common attack vectors.
+Reasoning
+A core principle of a robust system is to have confidence in its individual components. By testing the validator in isolation, we can easily simulate edge cases and ensure that its behavior is correct under all conditions, which is more difficult and slower to do with full integration tests.
 
-### **1.1. Prioritize Authentication Checks Over Input Validation (Existing)**
+Affected Files
+A new file to be created: packages/reference-server/lib/validator.test.ts
 
-**File to Modify:** packages/reference-server/pages/api/posts/index.ts
+Action Plan
+Create the new test file at packages/reference-server/lib/validator.test.ts.
 
-**Reasoning:** Currently, the POST /api/posts endpoint validates the request body *before* checking authentication. This could allow an attacker to learn about the API's required fields without being authenticated. Checking authentication first is a standard "fail-fast" security practice.
+Write unit tests to verify the convertParameterTypes function.
 
-**Action:** Move the authentication check to be the first operation inside the case 'POST': block. Ensure this pattern is applied to **all** protected endpoints (e.g., PUT/DELETE on /api/posts/\[id\]).
+Test standard conversions: "true" → true, "123" → 123, "a,b,c" → ['a','b','c'].
 
-### **1.2. Add Rate Limiting (New Recommendation)**
+Test that non-string inputs (e.g., numbers, booleans, pre-existing arrays) are passed through without modification.
 
-**Reasoning:** A public-facing API without rate limiting is vulnerable to denial-of-service (DoS) and brute-force attacks on authentication endpoints. Implementing a rate limit is a fundamental security measure.
+Test that an invalid number string (e.g., "12a") remains as the original string, allowing the ajv validator to later catch and report the type mismatch accurately.
 
-**Action:** Implement a simple, IP-based rate-limiting mechanism within the server middleware. For a reference project, an in-memory store is sufficient.
+Write unit tests to verify the extractRequestParameters function.
 
-#### **Example Middleware Logic:**
+Simulate NextApiRequest objects to confirm that parameters are correctly extracted from req.body for json encoding and from req.query for query encoding.
 
-// packages/reference-server/middleware.ts (or a new dedicated middleware file)
+Test the parameter overwrite behavior: for a POST or PUT request where a key exists in both req.query and req.body, assert that the value from req.body is the final value.
 
-const ipRequestCounts \= new Map\<string, number\>();  
-const RATE\_LIMIT \= 100; // 100 requests  
-const WINDOW\_MS \= 60 \* 1000; // per minute
+Write unit tests to verify the validateRequest function's behavior and error handling.
 
-export function middleware(request: NextRequest) {  
-  const ip \= request.ip ?? '127.0.0.1';  
-  const count \= ipRequestCounts.get(ip) || 0;
+Test a capability that has no parameters defined in the manifest (e.g., get_profile). Assert that validateRequest returns { isValid: true }.
 
-  if (count \>= RATE\_LIMIT) {  
-    return new NextResponse('Too many requests', { status: 429 });  
-  }
+Test a call to validateRequest with a non-existent capabilityId. Assert that it returns the standardized "no schema found" error object and does not throw an unhandled exception.
 
-  ipRequestCounts.set(ip, count \+ 1);  
-  setTimeout(() \=\> ipRequestCounts.delete(ip), WINDOW\_MS);
+Test that when validation fails, the function returns a response object with isValid: false and an error object that strictly follows the { "code": "VALIDATION_ERROR", ... } structure, including a detailed errors array.
 
-  // ... existing middleware logic for AURA-State header  
-  // ...  
-  return NextResponse.next();  
-}
+Incorporate the clearValidationCache() function within the test suite's setup logic (e.g., beforeEach or afterEach) to ensure that tests run in isolation and do not influence each other.
 
-### **1.3. Implement Audit Logging for Security Events (New Recommendation)**
+------------------------------------------------
 
-**Reasoning:** Logging critical security events, especially authentication failures, is essential for detecting and analyzing potential attacks.
+✅ Step 2: Make Parameter Extraction More Explicit
+Objective
+To refactor the parameter extraction logic in the validator to be more explicit and robust by clearly distinguishing between parameters that come from the URL (path and query string) and those that come from the request payload (body).
 
-**Action:** Add a simple logging statement for failed login attempts. In a real application, this would write to a dedicated, secure log file or service.
+Reasoning
+The current implementation correctly merges parameters. However, making this process more explicit improves the code's clarity and reduces the risk of subtle bugs, such as a parameter in the body accidentally overwriting a required parameter from the path. This change makes the system's behavior easier to reason about, which is fundamental to the project's philosophy.
 
-#### **Example Code:**
+Affected Files
+packages/reference-server/lib/validator.ts
 
-// packages/reference-server/pages/api/auth/login.ts
+Action Plan
+Modify the extractRequestParameters function in validator.ts.
 
-if (\!isValidPassword) {  
-  // Log the security event  
-  console.warn(\`\[SECURITY\_AUDIT\] Failed login attempt for email: ${email}\`);  
-    
-  res.status(401).json({  
-    code: 'INVALID\_CREDENTIALS',  
-    detail: 'Invalid email or password',  
-  });  
-  return;  
-}
+The function should create a new, unified parameters object.
 
-## **Step 2: Streamline and Fortify Agent Planning Logic** ✅
+First, copy all properties from req.query into this new object. Add a code comment explaining that in Next.js, req.query contains both dynamic route parameters (e.g., id from /posts/[id].ts) and query string parameters.
 
-The goal is to make the agent's planning phase more predictable, robust, and resilient to API failures.
+Next, if the request method is POST or PUT and req.body is an object, copy all properties from req.body into the parameters object. This ensures that payload parameters intentionally overwrite any query string parameters with the same name, which is standard API behavior.
 
-### **2.1. Enforce a Single, Canonical Planning Tool (Existing)**
+Explicitly ignore req.body for GET requests, regardless of the encoding hint in the manifest, to adhere to web standards.
 
-**File to Modify:** packages/reference-client/src/agent.ts
+Add specific unit tests for the new logic in validator.test.ts.
 
-**Reasoning:** Forcing the LLM to *always* use the create\_execution\_plan function establishes a single, predictable output format and simplifies the agent's code by removing branching logic.
+Test a GET request to /posts/123?foo=bar. Assert the final parameters object is { id: '123', foo: 'bar' }.
 
-**Action:** Modify createExecutionPlan to force the LLM to use the create\_execution\_plan tool via the tool\_choice parameter and remove the redundant else block.
+Test a PUT request to /posts/123 with a body of { "title": "New Title" }. Assert the final parameters object is { id: '123', title: 'New Title' }.
 
-### **2.2. Add Versioning and Retry Logic to LLM Calls (New Recommendation)**
+Test the overwrite behavior: a PUT request to /posts/123?title=old with a body of { "title": "new" } must result in a parameters object where title is "new".
 
-**Reasoning:** LLM APIs can be transiently unavailable or slow. The agent should be resilient to this. Furthermore, as the planning tool evolves, versioning is crucial to prevent breaking older agents.
+------------------------------------------------
 
-**Action:** Wrap the openai.chat.completions.create call in a retry loop with a timeout. Add a version field to the system prompt and the tool definition.
+✅ Step 3: Implement Manifest and Route Synchronization Check
+Objective
+To create an automated test that ensures every capabilityId used in the API routes is actually defined in the aura.json manifest.
 
-#### **Recommended Code Snippet:**
+Reasoning
+This "meta-test" acts as a safeguard against configuration drift. It prevents runtime errors that could occur if a developer renames or removes a capability in the manifest but forgets to update the code that uses it (or vice-versa). It enforces consistency between the public contract (aura.json) and the implementation.
 
-// packages/reference-client/src/agent.ts
+Affected Files
+A new file to be created, for example: packages/reference-server/test/manifest-sync.test.ts
 
-// In the system prompt:  
-// content: \`You are an AI agent controller... You MUST use the create\_execution\_plan(version:1.0) function.\`
+Action Plan
+Create a new test file for this synchronization check.
 
-// In the planningTool definition:  
-// function: { name: 'create\_execution\_plan', description: 'Creates a plan (v1.0)...' }
+In the test, programmatically find all API route files in the pages/api directory.
 
-// In the main agent logic where createExecutionPlan is called:  
-try {  
-  // Add retry logic here  
-  const executionPlan \= await createExecutionPlan(manifest, prompt, null);  
-  // ...  
-} catch (error) {  
-  console.error("Failed to create an execution plan after multiple retries.", error);  
-}
+Parse each file's content to find all instances where validateRequest(req, 'some_capability_id') is called, and extract the capabilityId strings.
 
-## **Step 3: Implement Critical Security Headers** ✅
+Load the public/.well-known/aura.json manifest.
 
-**Reasoning:** Modern web applications must use HTTP security headers to protect against common attacks like Cross-Site Scripting (XSS), clickjacking, and protocol-downgrade attacks.
+Assert that every capabilityId extracted from the code exists as a key in the manifest.capabilities object. If any are missing, the test should fail with a descriptive error message.
 
-**File to Modify:** packages/reference-server/next.config.ts
+------------------------------------------------
 
-**Action:** Add headers for Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, and Referrer-Policy to your Next.js configuration.
+✅ Step 4: Enhance Production-Readiness
+Objective
+To add small but high-impact changes that improve the server's robustness and debuggability in a production environment.
 
-#### **Recommended** next.config.js **Addition:**
+Reasoning
+A system that is easy to debug is more robust. These changes provide better visibility into the server's configuration and ensure that its error responses remain consistent over time.
 
-// packages/reference-server/next.config.ts
+Affected Files
+packages/reference-server/lib/validator.ts
 
-const securityHeaders \= \[  
-  {  
-    key: 'Content-Security-Policy',  
-    value: "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; img-src 'self' data:;",  
-  },  
-  {  
-    key: 'Strict-Transport-Security',  
-    value: 'max-age=63072000; includeSubDomains; preload',  
-  },  
-  {  
-    key: 'X-Frame-Options',  
-    value: 'SAMEORIGIN',  
-  },  
-  {  
-    key: 'Referrer-Policy',  
-    value: 'origin-when-cross-origin',  
-  }  
-\];
+Existing integration tests (e.g., packages/reference-client/src/agent.test.ts).
 
-const nextConfig \= {  
-  // ... existing config  
-  async headers() {  
-    return \[  
-      {  
-        source: '/:path\*',  
-        headers: securityHeaders,  
-      },  
-      // ... existing header configurations for /api and /.well-known  
-    \];  
-  },  
-};
+Action Plan
+Add startup logging to loadManifest in validator.ts.
 
-## **Step 4: Integrate End-to-End Testing in CI** ✅
+When the manifest is successfully loaded for the first time, log the absolute path of the file that was used (e.g., console.log('[AURA] Loaded manifest from: /path/to/project/...')). This makes it trivial to verify that the correct manifest file is being used in a deployed environment.
 
-**Reasoning:** The project already has an excellent multi-step test workflow (test-workflow.ts). Automating this in the CI pipeline ensures that no code change can break the core functionality of the protocol (login \-\> create post \-\> list post) without being caught.
+Strengthen integration tests for error shapes.
 
-**File to Modify:** .github/workflows/ci.yml
-
-**Action:** Add a new job or step to the CI workflow that starts the reference server in the background and then runs the pnpm \--filter aura-reference-client test-workflow command against it.
-
-#### **Example CI Job Step:**
-
-\# .github/workflows/ci.yml
-
-    \- name: Run End-to-End Tests  
-      run: |  
-        \# Start the server in the background  
-        pnpm \--filter aura-reference-server dev &  
-        \# Wait for the server to be ready  
-        sleep 15   
-        \# Run the E2E test script  
-        pnpm \--filter aura-reference-client test-workflow http://localhost:3000
-
-## **Step 5: Establish Community and Contribution Guidelines**
-
-**Reasoning:** In line with the Aaron Swartz philosophy of building open, collaborative systems, providing clear documentation for contributors is essential. It lowers the barrier to entry, ensures quality, and fosters a healthy community.
-
-**Action:** Create the following files in the root of the aura project.
-
-1. CONTRIBUTING.md: Explain the development workflow, coding style (e.g., "run pnpm format"), branching strategy (e.g., "create feature branches from main"), and how to submit a pull request.  
-2. SECURITY.md: Provide a clear and secure way for others to report potential security vulnerabilities (e.g., a private email address), so they are not disclosed publicly in GitHub issues.  
-3. CHANGELOG.md: Maintain a log of notable changes for each version release. This provides transparency and helps users of the protocol understand what has changed.
+In an existing integration test that checks for a 400 or 401 error (like in agent.test.ts), add an assertion to verify that the error response body contains the exact expected keys (code, detail, etc.). This guards against accidental changes to the error contract that could break an agent's ability to parse responses.

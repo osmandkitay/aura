@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateRequest } from '../../../lib/permissions';
+import { validateRequest } from '../../../lib/validator';
 
 // Mock user profiles
 const userProfiles: Record<string, unknown> = {
@@ -37,11 +38,24 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   switch (req.method) {
     case 'GET':
       // Get profile
+      // Validate request against get_profile capability schema
+      const getValidation = validateRequest(req, 'get_profile');
+      if (!getValidation.isValid) {
+        res.status(400).json(getValidation.error);
+        return;
+      }
+
       res.status(200).json(profile);
       break;
 
     case 'PUT':
       // Update profile
+      // Validate request against update_profile capability schema
+      const updateValidation = validateRequest(req, 'update_profile');
+      if (!updateValidation.isValid) {
+        res.status(400).json(updateValidation.error);
+        return;
+      }
 
       const { name, bio, avatar } = req.body;
       
