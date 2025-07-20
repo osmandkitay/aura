@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serialize } from 'cookie';
 import { validateRequest } from '../../../lib/validator';
+import { ALL_CAPABILITIES, CAPABILITY_PERMISSIONS } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -30,6 +31,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   res.setHeader('Set-Cookie', cookie);
+  
+  // Update AURA-State to reflect logged out state
+  // Get only capabilities that don't require authentication
+  const unauthenticatedCapabilities = ALL_CAPABILITIES.filter(capId => {
+    const permission = CAPABILITY_PERMISSIONS[capId];
+    return permission && !permission.authRequired;
+  });
+
+  const auraState = {
+    isAuthenticated: false,
+    context: {
+      path: req.url || '/api/auth/logout',
+      timestamp: new Date().toISOString(),
+    },
+    capabilities: unauthenticatedCapabilities,
+  };
+
+  // Set the corrected AURA-State header
+  const auraStateBase64 = Buffer.from(JSON.stringify(auraState)).toString('base64');
+  res.setHeader('AURA-State', auraStateBase64);
   
   res.status(200).json({
     success: true,

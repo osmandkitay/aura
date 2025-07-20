@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { serialize } from 'cookie';
 import * as bcrypt from 'bcryptjs';
 import { validateRequest } from '../../../lib/validator';
+import { ALL_CAPABILITIES, CAPABILITY_PERMISSIONS } from '../../../lib/permissions';
 
 // Mock user database with hashed passwords
 const users = [
@@ -70,6 +71,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   res.setHeader('Set-Cookie', cookie);
+  
+  // Update AURA-State to reflect authenticated state
+  // Get all capabilities available to authenticated users
+  const authenticatedCapabilities = ALL_CAPABILITIES.filter(capId => {
+    const permission = CAPABILITY_PERMISSIONS[capId];
+    return permission; // All capabilities are available to authenticated users
+  });
+
+  const auraState = {
+    isAuthenticated: true,
+    context: {
+      path: req.url || '/api/auth/login',
+      timestamp: new Date().toISOString(),
+    },
+    capabilities: authenticatedCapabilities,
+  };
+
+  // Set the corrected AURA-State header
+  const auraStateBase64 = Buffer.from(JSON.stringify(auraState)).toString('base64');
+  res.setHeader('AURA-State', auraStateBase64);
   
   res.status(200).json({
     success: true,

@@ -36,7 +36,7 @@ This repository is the **canonical specification for the AURA protocol**. It pro
 * **`packages/aura-protocol`**: The core `@aura/protocol` NPM package, containing TypeScript interfaces and the official JSON Schema for validation. **This is the heart of AURA.**
 * **`packages/reference-server`**: A reference implementation of an AURA-enabled server built with Next.js. Use this to understand how to make your own website AURA-compliant.
 * **`packages/reference-client`**: A minimal, backend-only reference client demonstrating two powerful ways to consume the protocol, without any browser or extension required.
-
+ 
 ## Getting Started: A 5-Minute Demonstration
 
 See the protocol in action.
