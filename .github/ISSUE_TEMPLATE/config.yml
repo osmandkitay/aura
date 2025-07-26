@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🗣️ GitHub Discussions
+    url: https://github.com/your-org/aura/discussions
+    about: Ask questions and discuss AURA Protocol with the community
+  - name: 📖 Documentation
+    url: https://github.com/your-org/aura#readme
+    about: Read the main documentation and getting started guide
+  - name: 🔧 Contributing Guide
+    url: https://github.com/your-org/aura/blob/main/CONTRIBUTING.md
+    about: Learn how to contribute to AURA Protocol
+  - name: 🛡️ Security Issues
+    url: mailto:security@aura-protocol.org
+    about: Report security vulnerabilities privately via email 

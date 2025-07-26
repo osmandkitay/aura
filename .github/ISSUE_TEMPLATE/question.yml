@@ -1,0 +1,178 @@
+name: ❓ Question
+description: Ask a question about AURA Protocol usage, implementation, or concepts
+title: "[Question]: "
+labels: ["question", "needs-response"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to the AURA Protocol community! 🚀
+        
+        We're here to help you understand and implement the AURA protocol.
+        Whether you're just getting started or working on advanced implementations, all questions are welcome!
+
+  - type: checkboxes
+    id: documentation-check
+    attributes:
+      label: 📖 Documentation Check
+      description: Have you checked our existing documentation?
+      options:
+        - label: I have checked the main README.md
+        - label: I have checked the package-specific documentation
+        - label: I have searched existing issues and discussions
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: 🎯 Question Category
+      description: What type of question are you asking?
+      options:
+        - "Getting Started (Setup, basic usage)"
+        - "Protocol Understanding (How AURA works)"
+        - "Implementation Help (Building with AURA)"
+        - "Reference Server (Next.js implementation)"
+        - "Reference Client (Agent examples)"
+        - "CLI Tools (aura-validate usage)"
+        - "JSON Schema & Validation"
+        - "Best Practices"
+        - "Performance & Optimization"
+        - "Integration with Frameworks"
+        - "Troubleshooting"
+        - "Community & Contributing"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: experience-level
+    attributes:
+      label: 📊 Experience Level
+      description: What's your experience level with AURA Protocol?
+      options:
+        - "New to AURA (Just getting started)"
+        - "Beginner (Basic understanding)"
+        - "Intermediate (Some implementation experience)"
+        - "Advanced (Extensive usage)"
+        - "Expert (Contributing to the protocol)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: ❓ Your Question
+      description: |
+        Ask your question in detail. Be as specific as possible to help us provide the best answer.
+      placeholder: |
+        I'm trying to [goal/task] and I'm wondering about [specific aspect].
+        
+        Specifically, I'd like to understand [detailed question].
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 🎪 Context & Use Case
+      description: |
+        Provide context about what you're trying to build or accomplish.
+        This helps us give more relevant and practical answers.
+      placeholder: |
+        I'm building [project description] and need to [specific requirement].
+        
+        My use case involves [scenario/requirements].
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: 🔄 What Have You Tried?
+      description: |
+        Tell us what you've already attempted or researched.
+        This helps us avoid suggesting things you've already tried.
+      placeholder: |
+        I've tried:
+        1. [Approach 1] - but [result/issue]
+        2. [Approach 2] - but [result/issue]
+        
+        I've looked at:
+        - [Documentation section]
+        - [Example code]
+        - [Other resources]
+
+  - type: textarea
+    id: code-example
+    attributes:
+      label: 📝 Code Example (Optional)
+      description: |
+        If relevant, share the code you're working with.
+        This helps us understand your specific implementation.
+      render: typescript
+      placeholder: |
+        // Your current code
+        import { AuraManifest } from '@aura/protocol';
+        
+        // What you're trying to do
+        const manifest: AuraManifest = {
+          // ...
+        };
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 🌍 Environment (If Relevant)
+      description: |
+        If your question is related to setup or implementation issues,
+        provide environment details.
+      value: |
+        - OS: [e.g. macOS 13.0, Ubuntu 20.04, Windows 11]
+        - Node.js version: [e.g. 18.17.0]
+        - Package manager: [e.g. pnpm 8.6.0]
+        - Framework: [e.g. Next.js 13.4, Express 4.18]
+        - AURA Protocol version: [e.g. 1.0.0]
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: 🎯 Expected Outcome
+      description: |
+        What are you hoping to achieve? What would a good answer look like?
+      placeholder: |
+        I'm hoping to:
+        - [Specific goal 1]
+        - [Specific goal 2]
+        
+        A good answer would help me understand [specific aspect].
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: ⏰ Urgency
+      description: How urgent is this question for your project?
+      options:
+        - "Not urgent - Learning and exploring"
+        - "Moderate - Working on a project"
+        - "High - Blocked on current work"
+        - "Critical - Production issue"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Community Contribution
+      description: How would you like to contribute back to the community?
+      options:
+        - label: I'd like to help improve documentation based on this question
+        - label: I'd be willing to share my solution once I find it
+        - label: I'd be interested in writing a tutorial/example
+        - label: I'd like to contribute to the codebase once I understand better
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📚 Additional Context
+      description: |
+        Any other information that might be helpful?
+        Links to related resources, similar projects, or specific requirements? 

@@ -1,0 +1,189 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or enhancement for AURA Protocol
+title: "[Feature]: "
+labels: ["enhancement", "needs-discussion"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! 
+        
+        AURA Protocol follows Aaron Swartz's philosophy of building open, community-driven technology.
+        Your ideas help us create better tools for machine-readable web interaction.
+
+  - type: checkboxes
+    id: existing-issues
+    attributes:
+      label: 🔍 Is there an existing feature request for this?
+      description: Please search to see if a similar feature request already exists.
+      options:
+        - label: I have searched the existing issues and feature requests
+          required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: 🎯 Feature Type
+      description: What type of feature are you requesting?
+      options:
+        - "Protocol Enhancement (Core AURA specification)"
+        - "Reference Implementation (Server/Client examples)"
+        - "CLI Tool Improvement (aura-validate)"
+        - "Documentation Enhancement"
+        - "Developer Experience (DX)"
+        - "Testing & Validation"
+        - "Performance Improvement"
+        - "Security Enhancement"
+        - "Community Feature"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: 📦 Which package would this affect?
+      description: Select the package that would be most impacted
+      options:
+        - "@aura/protocol (Core package)"
+        - "reference-server (Next.js server)"
+        - "reference-client (Example client)"
+        - "CLI tools (aura-validate)"
+        - "Documentation"
+        - "Multiple packages"
+        - "New package"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: 🎯 Problem Statement
+      description: |
+        What problem does this feature solve? What use case does it address?
+        Help us understand the motivation behind this request.
+      placeholder: |
+        As a [type of user], I want [goal] so that [benefit].
+        
+        Currently, when I try to [task], I face [problem] because [reason].
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: |
+        Describe the solution you'd like to see implemented.
+        Be as specific as possible about how it should work.
+      placeholder: |
+        I would like to see [specific feature] that works by [mechanism].
+        
+        This would allow users to [capability] and provide [benefits].
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternatives Considered
+      description: |
+        Describe any alternative solutions or features you've considered.
+        This helps us understand the full scope of the problem.
+      placeholder: |
+        I've also considered:
+        1. [Alternative 1] - but this has [limitation]
+        2. [Alternative 2] - but this doesn't address [aspect]
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: 🎪 Use Cases
+      description: |
+        Provide specific examples of how this feature would be used.
+        Include different scenarios where this would be valuable.
+      placeholder: |
+        Use Case 1: [Scenario description]
+        - User does [action]
+        - System responds with [behavior]
+        - Result: [outcome]
+        
+        Use Case 2: [Another scenario]
+        - [Steps and expected behavior]
+
+  - type: textarea
+    id: implementation-ideas
+    attributes:
+      label: 🛠️ Implementation Ideas
+      description: |
+        If you have ideas about how this could be implemented, share them here.
+        Include API design, configuration options, or architectural considerations.
+      render: typescript
+      placeholder: |
+        // Example API or configuration
+        interface NewFeature {
+          // Properties and methods
+        }
+        
+        // Usage example
+        const feature = new NewFeature({
+          // Configuration
+        });
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: ⚡ Priority Level
+      description: How important is this feature to you and your use case?
+      options:
+        - "Critical - Blocking my current work"
+        - "High - Important for my project"
+        - "Medium - Would be nice to have"
+        - "Low - Future enhancement"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: backwards-compatibility
+    attributes:
+      label: 🔄 Compatibility Considerations
+      description: Have you considered the impact on existing code?
+      options:
+        - label: This feature should maintain backward compatibility
+        - label: This feature may require breaking changes (please explain in additional context)
+        - label: I'm not sure about compatibility implications
+
+  - type: textarea
+    id: community-benefit
+    attributes:
+      label: 🌍 Community Benefit
+      description: |
+        How would this feature benefit the broader AURA Protocol community?
+        Consider developers, implementers, and end users.
+      placeholder: |
+        This feature would help the community by:
+        - [Benefit 1]
+        - [Benefit 2]
+        - [Impact on ecosystem]
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📚 Additional Context
+      description: |
+        Add any other context, screenshots, links to related discussions,
+        or examples from other projects that inspire this feature.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Would you be interested in contributing this feature?
+      options:
+        - label: I would be willing to submit a PR to implement this feature
+        - label: I would be willing to help with design and planning
+        - label: I would be willing to test this feature once implemented
+        - label: I would be willing to help with documentation 
