@@ -61,13 +61,8 @@ body:
     id: problem-statement
     attributes:
       label: 🎯 Problem Statement
-      description: |
-        What problem does this feature solve? What use case does it address?
-        Help us understand the motivation behind this request.
-      placeholder: |
-        As a [type of user], I want [goal] so that [benefit].
-        
-        Currently, when I try to [task], I face [problem] because [reason].
+      description: "What problem does this feature solve?"
+      placeholder: "As a [type of user], I want [goal] so that [benefit]."
     validations:
       required: true
 
@@ -75,13 +70,8 @@ body:
     id: proposed-solution
     attributes:
       label: 💡 Proposed Solution
-      description: |
-        Describe the solution you'd like to see implemented.
-        Be as specific as possible about how it should work.
-      placeholder: |
-        I would like to see [specific feature] that works by [mechanism].
-        
-        This would allow users to [capability] and provide [benefits].
+      description: "How should it work?"
+      placeholder: "I would like [specific feature] that [how it works]."
     validations:
       required: true
 
@@ -101,36 +91,17 @@ body:
     id: use-cases
     attributes:
       label: 🎪 Use Cases
-      description: |
-        Provide specific examples of how this feature would be used.
-        Include different scenarios where this would be valuable.
+      description: "Specific examples of how this would be used"
       placeholder: |
-        Use Case 1: [Scenario description]
-        - User does [action]
-        - System responds with [behavior]
-        - Result: [outcome]
-        
-        Use Case 2: [Another scenario]
-        - [Steps and expected behavior]
+        1. [Scenario] - [Expected behavior]
+        2. [Another scenario] - [Expected behavior]
 
   - type: textarea
     id: implementation-ideas
     attributes:
-      label: 🛠️ Implementation Ideas
-      description: |
-        If you have ideas about how this could be implemented, share them here.
-        Include API design, configuration options, or architectural considerations.
+      label: 🛠️ Implementation Ideas (Optional)
+      description: "API design or code examples if you have ideas"
       render: typescript
-      placeholder: |
-        // Example API or configuration
-        interface NewFeature {
-          // Properties and methods
-        }
-        
-        // Usage example
-        const feature = new NewFeature({
-          // Configuration
-        });
 
   - type: dropdown
     id: priority

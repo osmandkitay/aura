@@ -10,7 +10,7 @@ AURA creates an open protocol for machine-readable web interaction, breaking cor
 
 ```bash
 # Clone and setup
-git clone https://github.com/your-org/aura.git
+git clone https://github.com/osmandkitay/aura.git
 cd aura
 pnpm install
 
@@ -97,21 +97,17 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
 
 ## 🎯 Current Priorities
 
-Based on `step.md`:
+### High Priority
+- Core protocol stability and validation
+- Documentation improvements
+- Community foundation
 
-### Essential (High Priority)
-- Legal and community foundation completion
-- Basic documentation gaps
-- Core protocol stability
-
-### Optional (Medium Priority)
-- CLI tool improvements
-- Reference implementation polish
-- Additional examples and tutorials
+### Medium Priority
+- CLI tool enhancements
+- Reference implementation examples
+- Framework integrations
 
 ## 🌍 Building the Ecosystem
-
-AURA follows Aaron Swartz's philosophy: **show the concept, then let the community build**.
 
 We provide:
 - Clear protocol specification (TypeScript interfaces and JSON Schema)

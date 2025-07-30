@@ -21,142 +21,39 @@ npx @aura/reference-client crawler -- https://example.com
 ## 🔧 Common Issues
 
 ### 1. Manifest Not Found (404)
-
-**Check Static File Routing:**
-
-Next.js:
-```javascript
-// next.config.ts
-const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/.well-known/aura.json',
-        destination: '/api/manifest',
-      },
-    ];
-  },
-};
-```
-
-Vercel:
-```json
-// vercel.json
-{
-  "routes": [
-    {
-      "src": "/.well-known/aura.json",
-      "dest": "/public/.well-known/aura.json"
-    }
-  ]
-}
-```
+- Check static file routing: Ensure `/.well-known/aura.json` is served
+- Verify file location: Place in `public/.well-known/` or configure API route
 
 ### 2. CORS Errors
-
-**Add CORS Headers:**
-
 ```typescript
-// middleware.ts
+// middleware.ts - Add CORS headers
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
-
   if (request.nextUrl.pathname === '/.well-known/aura.json') {
     response.headers.set('Access-Control-Allow-Origin', '*');
     response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
   }
-
   return response;
 }
 ```
 
 ### 3. JSON Validation Errors
-
-**Fix Common Issues:**
-
 ```bash
 # Validate JSON syntax
 cat .well-known/aura.json | jq '.'
 
-# Use prettier to format
-npx prettier --parser json .well-known/aura.json
-```
-
-**Required Fields Checklist:**
-```json
-{
-  "$schema": "https://aura.dev/schemas/v1.0.json",
-  "protocol": "AURA",
-  "version": "1.0",
-  "site": {
-    "name": "Your Site",
-    "url": "https://example.com"
-  },
-  "resources": {},
-  "capabilities": {}
-}
+# Required fields: $schema, protocol, version, site, resources, capabilities
 ```
 
 ### 4. URI Template Issues
-
-**Common Problems:**
-```javascript
-// ❌ Invalid
-"/api/posts/{id"           // Missing closing brace
-"/api/posts/{}"            // Empty variable name
-
-// ✅ Valid
-"/api/posts/{id}"
-"/api/posts/{id}{?limit,offset}"
-```
-
-**Test Templates:**
-```typescript
-import { parseTemplate } from 'url-template';
-
-function testTemplate(template: string) {
-  try {
-    const parsed = parseTemplate(template);
-    const result = parsed.expand({ id: '123', limit: 10 });
-    console.log(`✅ ${template} → ${result}`);
-  } catch (error) {
-    console.error(`❌ ${template}: ${error.message}`);
-  }
-}
-```
+- Missing closing brace: `/api/posts/{id` → `/api/posts/{id}`
+- Empty variable: `/api/posts/{}` → `/api/posts/{id}`
+- Test with: `parseTemplate(template).expand({ id: '123' })`
 
 ### 5. Parameter Mapping Errors
-
-**Align Mappings with Schema:**
-```json
-{
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "title": { "type": "string" },
-      "content": { "type": "string" }
-    }
-  },
-  "action": {
-    "parameterMapping": {
-      "title": "/title",     // ✅ Matches schema
-      "content": "/content"  // ✅ Matches schema
-    }
-  }
-}
-```
-
-**JSON Pointer Syntax:**
-```json
-{
-  "parameterMapping": {
-    "userId": "/user/id",      // ✅ Nested property
-    "firstTag": "/tags/0",     // ✅ Array index
-    "title": "/title",         // ✅ Simple property
-    "invalid": "title"         // ❌ Missing leading /
-  }
-}
-```
+- Ensure mappings match schema properties
+- Use JSON Pointer syntax: `/title`, `/user/id`, `/tags/0`
+- All pointers must start with `/`
 
 ### 6. Build Issues
 

@@ -72,15 +72,12 @@ body:
     id: environment
     attributes:
       label: 🌍 Environment
-      description: |
-        Please provide information about your environment.
-        Tip: You can run `node --version`, `npm --version`, and `pnpm --version` to get version info.
+      description: "OS, Node.js version, package manager, AURA version"
       value: |
-        - OS: [e.g. macOS 13.0, Ubuntu 20.04, Windows 11]
-        - Node.js version: [e.g. 18.17.0]
-        - Package manager: [e.g. pnpm 8.6.0, npm 9.6.7]
-        - Browser (if applicable): [e.g. Chrome 115, Firefox 116]
-        - AURA Protocol version: [e.g. 1.0.0]
+        - OS: 
+        - Node.js: 
+        - Package manager: 
+        - AURA version: 
     validations:
       required: true
 

@@ -63,12 +63,8 @@ body:
     id: question
     attributes:
       label: ❓ Your Question
-      description: |
-        Ask your question in detail. Be as specific as possible to help us provide the best answer.
-      placeholder: |
-        I'm trying to [goal/task] and I'm wondering about [specific aspect].
-        
-        Specifically, I'd like to understand [detailed question].
+      description: "Ask your question clearly and specifically"
+      placeholder: "I'm trying to [goal] and wondering about [specific aspect]."
     validations:
       required: true
 
@@ -76,47 +72,24 @@ body:
     id: context
     attributes:
       label: 🎪 Context & Use Case
-      description: |
-        Provide context about what you're trying to build or accomplish.
-        This helps us give more relevant and practical answers.
-      placeholder: |
-        I'm building [project description] and need to [specific requirement].
-        
-        My use case involves [scenario/requirements].
+      description: "What are you building? What's your use case?"
+      placeholder: "I'm building [project] and need to [requirement]."
 
   - type: textarea
     id: what-tried
     attributes:
       label: 🔄 What Have You Tried?
-      description: |
-        Tell us what you've already attempted or researched.
-        This helps us avoid suggesting things you've already tried.
+      description: "What approaches have you already attempted?"
       placeholder: |
-        I've tried:
-        1. [Approach 1] - but [result/issue]
-        2. [Approach 2] - but [result/issue]
-        
-        I've looked at:
-        - [Documentation section]
-        - [Example code]
-        - [Other resources]
+        1. [Approach] - [Result]
+        2. [Documentation/resources checked]
 
   - type: textarea
     id: code-example
     attributes:
       label: 📝 Code Example (Optional)
-      description: |
-        If relevant, share the code you're working with.
-        This helps us understand your specific implementation.
+      description: "Share relevant code if applicable"
       render: typescript
-      placeholder: |
-        // Your current code
-        import { AuraManifest } from '@aura/protocol';
-        
-        // What you're trying to do
-        const manifest: AuraManifest = {
-          // ...
-        };
 
   - type: textarea
     id: environment

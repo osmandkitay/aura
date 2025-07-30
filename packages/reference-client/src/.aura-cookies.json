@@ -8,14 +8,13 @@
   "cookies": [
     {
       "key": "auth-token",
-      "value": "MToxNzUzODg2OTU5NDA1",
-      "maxAge": 604800,
+      "expires": "1970-01-01T00:00:00.000Z",
       "domain": "localhost",
       "path": "/",
       "httpOnly": true,
       "hostOnly": true,
       "creation": "2025-07-30T14:49:19.407Z",
-      "lastAccessed": "2025-07-30T14:49:20.505Z",
+      "lastAccessed": "2025-07-30T15:59:59.857Z",
       "sameSite": "lax"
     }
   ]

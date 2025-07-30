@@ -37,43 +37,15 @@ aura-validate --json .well-known/aura.json
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { AuraManifest } from '@aura/protocol';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Load AURA JSON Schema
-const schemaPath = path.join(__dirname, 'node_modules/@aura/protocol/dist/aura-v1.0.schema.json');
-const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
-
-// Create validator
+// Setup validator
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
 
-// Validate manifest
 function validateManifest(manifest: any): { valid: boolean; errors: any[] } {
   const valid = validate(manifest);
-  return {
-    valid,
-    errors: validate.errors || []
-  };
-}
-
-// Example usage
-const manifest = {
-  $schema: 'https://aura.dev/schemas/v1.0.json',
-  protocol: 'AURA',
-  version: '1.0',
-  site: {
-    name: 'My AURA Site',
-    url: 'https://example.com'
-  },
-  resources: {},
-  capabilities: {}
-};
-
-const result = validateManifest(manifest);
-if (!result.valid) {
-  console.error('Validation errors:', result.errors);
+  return { valid, errors: validate.errors || [] };
 }
 ```
 
@@ -233,57 +205,12 @@ import { validateManifest } from '../src/validation';
 
 describe('Manifest Validation', () => {
   it('should validate complete manifest', () => {
-    const manifest = {
-      $schema: 'https://aura.dev/schemas/v1.0.json',
-      protocol: 'AURA',
-      version: '1.0',
-      site: {
-        name: 'Test Site',
-        url: 'https://example.com'
-      },
-      resources: {
-        posts: {
-          uriPattern: '/api/posts/{id}',
-          description: 'Blog posts',
-          operations: {
-            GET: { capabilityId: 'read_post' }
-          }
-        }
-      },
-      capabilities: {
-        read_post: {
-          id: 'read_post',
-          v: 1,
-          description: 'Read a blog post',
-          parameters: {
-            type: 'object',
-            required: ['id'],
-            properties: {
-              id: { type: 'string' }
-            }
-          },
-          action: {
-            type: 'HTTP',
-            method: 'GET',
-            urlTemplate: '/api/posts/{id}',
-            parameterMapping: {
-              id: '/id'
-            }
-          }
-        }
-      }
-    };
-
-    const result = validateManifest(manifest);
-    expect(result.valid).toBe(true);
+    const validManifest = { /* valid manifest structure */ };
+    expect(validateManifest(validManifest).valid).toBe(true);
   });
 
   it('should reject invalid manifests', () => {
-    const invalidManifest = {
-      protocol: 'AURA'
-      // Missing required fields
-    };
-
+    const invalidManifest = { protocol: 'AURA' }; // Missing required fields
     const result = validateManifest(invalidManifest);
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
