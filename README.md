@@ -14,7 +14,7 @@ The web was built for human eyes. AURA is a specification for giving it a machin
 Current AI agents interact with websites in a brittle and inefficient way:
 1. **Screen Scraping:** They "look" at pixels and guess where to click. This is slow, expensive, and breaks with the slightest UI change.
 2. **DOM Manipulation:** They parse complex HTML structures, which are inconsistent across sites and change frequently.
-3. **Insecurity:** Website owners have no control over what an agent might do. An agent could accidentally or maliciously perform dangerous actions.
+3. **Insecurity:** Website owners have no control over what an agent might do. 
 
 AURA solves this by allowing websites to **declare their capabilities** in a simple, standardized `aura.json` manifest file.
 
@@ -119,6 +119,6 @@ This repository defines the standard. The true power of AURA will be realized wh
 
 * **Adapters** for all major web frameworks (Express, Laravel, Django, Ruby on Rails).
 * **Clients** in every major language (Python, Go, Rust, Java).
-* **Intelligent Applications** like browser extensions, search engines, and autonomous agents that leverage this new, structured layer of the web.
+* **Intelligent Applications** 
 
-AURA is a public good. Fork it, build with it, and help us create a more intelligent and interoperable web. 
+AURA is a public good. Fork it, build with it, and help us create a more intelligent and interoperable web.

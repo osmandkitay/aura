@@ -10,7 +10,6 @@ body:
       value: |
         Thank you for suggesting a new feature! 
         
-        AURA Protocol follows Aaron Swartz's philosophy of building open, community-driven technology.
         Your ideas help us create better tools for machine-readable web interaction.
 
   - type: checkboxes
