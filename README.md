@@ -4,7 +4,7 @@
 
 The web was built for human eyes. AURA is a specification for giving it a machine-readable "API".
 
-[![NPM Version](https://img.shields.io/npm/v/@aura/protocol.svg)](https://www.npmjs.com/package/@aura/protocol)
+[![NPM Version](https://img.shields.io/npm/v/@aura/protocol.svg)](https://www.npmjs.com/package/aura-protocol)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
