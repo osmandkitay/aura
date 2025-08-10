@@ -26,6 +26,9 @@ importers:
 
   packages/aura-protocol:
     dependencies:
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -36,9 +39,6 @@ importers:
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
-      ajv:
-        specifier: ^8.17.1
-        version: 8.17.1
       axios:
         specifier: ^1.10.0
         version: 1.10.0
@@ -51,12 +51,12 @@ importers:
 
   packages/reference-client:
     dependencies:
-      '@aura/protocol':
-        specifier: workspace:*
-        version: link:../aura-protocol
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
+      aura-protocol:
+        specifier: workspace:*
+        version: link:../aura-protocol
       axios:
         specifier: ^1.7.2
         version: 1.10.0
@@ -94,15 +94,15 @@ importers:
 
   packages/reference-server:
     dependencies:
-      '@aura/protocol':
-        specifier: workspace:^
-        version: link:../aura-protocol
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
       ajv-formats:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.17.1)
+      aura-protocol:
+        specifier: workspace:^
+        version: link:../aura-protocol
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2

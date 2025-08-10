@@ -2,7 +2,7 @@ import 'dotenv/config';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import { AuraManifest, AuraState } from '@aura/protocol';
+import { AuraManifest, AuraState } from 'aura-protocol';
 
 interface TestResult {
   name: string;

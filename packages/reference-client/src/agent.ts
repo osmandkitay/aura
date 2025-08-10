@@ -4,7 +4,7 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import OpenAI from 'openai';
-import { AuraManifest, AuraState } from '@aura/protocol';
+import { AuraManifest, AuraState } from 'aura-protocol';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';

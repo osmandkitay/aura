@@ -10,7 +10,7 @@
     "test-workflow": "tsx src/test-workflow.ts"
   },
   "dependencies": {
-    "@aura/protocol": "workspace:*",
+    "aura-protocol": "workspace:*",
     "ajv": "^8.17.1",
     "axios": "^1.7.2",
     "axios-cookiejar-support": "^6.0.3",

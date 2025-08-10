@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
-import { AuraManifest } from '@aura/protocol';
+import { AuraManifest } from 'aura-protocol';
 import * as fs from 'fs';
 import * as path from 'path';
 

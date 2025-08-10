@@ -1,6 +1,6 @@
 // packages/reference-client/src/crawler.ts
 import axios from 'axios';
-import { AuraManifest } from '@aura/protocol';
+import { AuraManifest } from 'aura-protocol';
 
 /**
  * This script demonstrates how a search engine or indexer could crawl an AURA-enabled site.

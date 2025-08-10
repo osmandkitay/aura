@@ -16,7 +16,7 @@ import { prepareUrlPath, mapParameters, resolveJsonPointer } from './agent';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import { AuraManifest, AuraState } from '@aura/protocol';
+import { AuraManifest, AuraState } from 'aura-protocol';
 
 // Helper to extract cookie from set-cookie header
 function extractCookieValue(setCookieHeader: string | string[] | undefined, cookieName: string): string | undefined {
