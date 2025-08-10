@@ -5,18 +5,5 @@
   "enableLooseMode": false,
   "allowSpecialUseDomain": true,
   "prefixSecurity": "silent",
-  "cookies": [
-    {
-      "key": "auth-token",
-      "value": "MToxNzUzODkyODIwMTc2",
-      "maxAge": 604800,
-      "domain": "localhost",
-      "path": "/",
-      "httpOnly": true,
-      "hostOnly": true,
-      "creation": "2025-07-30T16:27:00.178Z",
-      "lastAccessed": "2025-07-30T16:27:00.178Z",
-      "sameSite": "lax"
-    }
-  ]
+  "cookies": []
 }

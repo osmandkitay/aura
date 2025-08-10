@@ -5,7 +5,7 @@ import * as path from 'path';
 import { defineCommand, runMain } from 'citty';
 import * as Ajv from 'ajv';
 import { red, green, blue, cyan, yellow, gray } from 'kleur';
-import axios from 'axios';
+// import axios from 'axios';
 
 interface ValidationResult {
   valid: boolean;
@@ -60,13 +60,14 @@ const main = defineCommand({
       let manifestSource: string;
 
       if (args.url) {
-        // Fetch from URL
-        if (!args.json) {
-          console.log(blue(`Fetching manifest from ${args.url}...`));
+        // Fetch from URL - temporarily disabled
+        const error = 'URL validation is temporarily disabled. Please use local file validation.';
+        if (args.json) {
+          console.log(JSON.stringify({ valid: false, error }, null, 2));
+        } else {
+          console.error(red(error));
         }
-        const response = await axios.get(args.url);
-        manifestData = response.data;
-        manifestSource = args.url;
+        process.exit(1);
       } else {
         // Read from file
         const manifestPath = args.file || path.join(process.cwd(), '.well-known', 'aura.json');

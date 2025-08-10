@@ -1,0 +1,112 @@
+{
+  "$schema": "https://aura.dev/schemas/v1.0.json",
+  "protocol": "AURA",
+  "version": "1.0",
+  "site": {
+    "name": "AURA Protocol Test Site",
+    "url": "https://example.com",
+    "description": "Test site for AURA protocol validation"
+  },
+  "resources": {
+    "posts": {
+      "description": "Blog posts resource",
+      "uriPattern": "/api/posts",
+      "operations": {
+        "GET": {
+          "capabilityId": "list-posts"
+        }
+      }
+    },
+    "post": {
+      "description": "Individual blog post resource",
+      "uriPattern": "/api/posts/{id}",
+      "operations": {
+        "GET": {
+          "capabilityId": "get-post"
+        }
+      }
+    },
+    "user-profile": {
+      "description": "User profile resource",
+      "uriPattern": "/api/user/profile",
+      "operations": {
+        "GET": {
+          "capabilityId": "get-user-profile"
+        }
+      }
+    }
+  },
+  "capabilities": {
+    "list-posts": {
+      "id": "list-posts",
+      "v": 1,
+      "description": "List all blog posts with pagination",
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/posts{?limit,offset}",
+        "parameterMapping": {
+          "limit": "/limit",
+          "offset": "/offset"
+        }
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of posts to return",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of posts to skip",
+            "default": 0,
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "get-post": {
+      "id": "get-post",
+      "v": 1,
+      "description": "Get a specific blog post by ID",
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/posts/{id}",
+        "parameterMapping": {
+          "id": "/id"
+        }
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Post ID",
+            "required": true
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    "get-user-profile": {
+      "id": "get-user-profile",
+      "v": 1,
+      "description": "Get user profile information",
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/api/user/profile",
+        "parameterMapping": {}
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

@@ -1,12 +1,18 @@
 {
-  "name": "@aura/protocol",
-  "version": "1.0.0",
+  "name": "aura-protocol",
+  "version": "1.0.3",
   "description": "Core TypeScript definitions and JSON Schema for the AURA protocol - making websites machine-readable for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
-    "generate-schema": "ts-node scripts/generate-schema.ts"
+    "generate-schema": "ts-node scripts/generate-schema.ts",
+    "prepublishOnly": "npm run build"
   },
   "bin": {
     "aura-validate": "./dist/cli/aura-validate.js"
@@ -34,15 +40,18 @@
   "bugs": {
     "url": "https://github.com/osmandkitay/aura/issues"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
-    "ajv": "^8.17.1",
     "axios": "^1.10.0",
     "ts-node": "^10.9.2",
     "typescript-json-schema": "^0.65.1"
   },
   "dependencies": {
     "citty": "^0.1.6",
-    "kleur": "^4.1.5"
+    "kleur": "^4.1.5",
+    "ajv": "^8.17.1"
   }
 }

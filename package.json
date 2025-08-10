@@ -1,6 +1,6 @@
 {
   "name": "aura-project",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "AURA: An open protocol for a machine-readable web.",
   "main": "index.js",
   "scripts": {
