@@ -10,7 +10,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run generate-schema",
     "generate-schema": "ts-node scripts/generate-schema.ts",
     "prepublishOnly": "npm run build"
   },
