@@ -1,0 +1,30 @@
+{
+  "name": "@aura/did-auth",
+  "version": "1.0.0",
+  "description": "DID-based authentication and access control for AURA Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.0.0",
+    "@noble/secp256k1": "^2.0.0",
+    "aura-protocol": "workspace:*",
+    "idb": "^8.0.0",
+    "jose": "^5.2.0",
+    "lru-cache": "^10.1.0",
+    "multiformats": "^13.0.0",
+    "uint8arrays": "^5.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
