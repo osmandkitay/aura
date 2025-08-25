@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "aura": {
+      "command": "npx",
+      "args": ["aura-mcp-server"],
+      "description": "AURA Protocol MCP Server - enables interaction with AURA-enabled websites"
+    }
+  }
+}
