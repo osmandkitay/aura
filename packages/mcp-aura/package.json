@@ -1,0 +1,57 @@
+{
+  "name": "mcp-aura",
+  "version": "1.0.0",
+  "description": "MCP integration package for AURA protocol - enables AI agents to interact with AURA-enabled websites",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "aura-mcp-server": "dist/mcp-server.js"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "server": "tsx src/mcp-server.ts",
+    "test": "vitest",
+    "test:unit": "vitest run --reporter=verbose src/AuraAdapter.test.ts",
+    "test:integration": "vitest run --reporter=verbose src/mcp-handler.integration.test.ts",
+    "test:watch": "vitest --watch",
+    "test:agent": "node test-agent.js"
+  },
+  "keywords": [
+    "mcp",
+    "aura",
+    "protocol",
+    "ai",
+    "agent",
+    "integration",
+    "web",
+    "automation"
+  ],
+  "author": "Dervis-ofAI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/osmandkitay/aura.git",
+    "directory": "packages/mcp-aura"
+  },
+  "dependencies": {
+    "aura-protocol": "workspace:*",
+    "axios": "^1.7.2",
+    "tough-cookie": "^5.1.2",
+    "ajv": "^8.17.1",
+    "url-template": "^3.1.1",
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/tough-cookie": "^4.0.5",
+    "@types/url-template": "^3.0.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
