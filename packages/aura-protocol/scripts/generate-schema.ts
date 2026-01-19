@@ -84,7 +84,7 @@ if (schema.definitions) {
   if (resourceSchema && !schema.definitions[resourceSchemaName]) {
     schema.definitions[resourceSchemaName] = resourceSchema;
   }
-  
+
   if (capabilitySchema && !schema.definitions[capabilitySchemaName]) {
     schema.definitions[capabilitySchemaName] = capabilitySchema;
   }
@@ -120,7 +120,7 @@ if (schema.definitions) {
   if (capabilityDef && typeof capabilityDef === 'object' && 'definitions' in capabilityDef && capabilityDef.definitions) {
     console.log('Moving JSONSchema definition to top level...');
     const nestedDefs = capabilityDef.definitions as any;
-    
+
     if (nestedDefs['JSONSchema']) {
       schema.definitions['JSONSchema'] = nestedDefs['JSONSchema'];
     }
@@ -133,7 +133,15 @@ if (schema.definitions) {
     if (nestedDefs['Record<string,string>']) {
       schema.definitions['Record<string,string>'] = nestedDefs['Record<string,string>'];
     }
-    
+    if (nestedDefs['ParameterLocation']) {
+      schema.definitions['ParameterLocation'] = nestedDefs['ParameterLocation'];
+    }
+
+    const paramLocRecordKey = Object.keys(nestedDefs).find(k => k.includes('Record<string,ParameterLocation>'));
+    if (paramLocRecordKey) {
+      schema.definitions[paramLocRecordKey] = nestedDefs[paramLocRecordKey];
+    }
+
     // Remove the nested definitions to avoid duplication
     delete capabilityDef.definitions;
   }
@@ -142,9 +150,9 @@ if (schema.definitions) {
 // Remove non-standard keywords to ensure schema portability
 function purgeDefaultProps(obj: any) {
   if (typeof obj !== 'object' || obj === null) return;
-  
+
   delete obj.defaultProperties;
-  
+
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       purgeDefaultProps(obj[key]);
@@ -167,7 +175,7 @@ additionalTypes.forEach(typeName => {
   if (typeSchema) {
     // Clean up non-standard properties for additional schemas too
     purgeDefaultProps(typeSchema);
-    
+
     const typeOutputPath = path.join(outputDir, `${typeName.toLowerCase()}.schema.json`);
     fs.writeFileSync(typeOutputPath, JSON.stringify(typeSchema, null, 2));
     console.log(`Schema for ${typeName} generated at: ${typeOutputPath}`);

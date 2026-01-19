@@ -12,7 +12,7 @@ vi.mock('openai', () => {
 // Ensure the OpenAI client can initialize in the agent module during tests
 process.env.NODE_ENV = 'test';
 process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-test-key';
-import { prepareUrlPath, mapParameters, resolveJsonPointer } from './agent';
+import { prepareUrlPath, mapParameters, resolveJsonPointer, splitParametersByLocation } from './agent';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
@@ -384,6 +384,44 @@ describe('AURA Agent Core Functions', () => {
         secondaryTag: 'web',
         latestPostTitle: 'First Post'
       });
+    });
+  });
+
+  describe('splitParametersByLocation', () => {
+    it('should split parameters into explicit buckets and leave unassigned', () => {
+      const params = {
+        id: '123',
+        q: 'search',
+        token: 'tok_abc',
+        content: 'hello world',
+        extra: 'keep'
+      };
+
+      const parameterLocation = {
+        id: 'path',
+        q: 'query',
+        token: 'header',
+        content: 'body'
+      } as const;
+
+      const result = splitParametersByLocation(params, parameterLocation);
+
+      expect(result.path).toEqual({ id: '123' });
+      expect(result.query).toEqual({ q: 'search' });
+      expect(result.header).toEqual({ token: 'tok_abc' });
+      expect(result.body).toEqual({ content: 'hello world' });
+      expect(result.unassigned).toEqual({ extra: 'keep' });
+    });
+
+    it('should treat all parameters as unassigned when no parameterLocation is provided', () => {
+      const params = { id: '123', q: 'search' };
+      const result = splitParametersByLocation(params);
+
+      expect(result.path).toEqual({});
+      expect(result.query).toEqual({});
+      expect(result.header).toEqual({});
+      expect(result.body).toEqual({});
+      expect(result.unassigned).toEqual(params);
     });
   });
 });

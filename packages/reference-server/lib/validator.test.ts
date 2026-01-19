@@ -153,13 +153,14 @@ function createMockRequest(options: {
   method?: string;
   query?: Record<string, any>;
   body?: any;
+  headers?: Record<string, any>;
 }): NextApiRequest {
   return {
     method: options.method || 'GET',
     query: options.query || {},
     body: options.body || {},
     url: '',
-    headers: {},
+    headers: options.headers || {},
     cookies: {}
   } as NextApiRequest;
 }
@@ -591,4 +592,55 @@ describe('Validator Unit Tests', () => {
       expect(result.isValid).toBe(true);
     });
   });
-}); 
+
+  describe('Parameter location handling', () => {
+    it('should honor parameterLocation for path, query, header, and body', () => {
+      const manifestWithLocations = {
+        ...mockManifest,
+        capabilities: {
+          split_params: {
+            id: 'split_params',
+            v: 1,
+            description: 'Split params by location',
+            parameters: {
+              type: 'object',
+              required: ['id', 'q', 'token', 'content'],
+              properties: {
+                id: { type: 'string', pattern: '^[0-9]+$' },
+                q: { type: 'string', minLength: 3 },
+                token: { type: 'string', pattern: '^tok_' },
+                content: { type: 'string', minLength: 5 }
+              }
+            },
+            action: {
+              type: 'HTTP',
+              method: 'POST',
+              urlTemplate: '/api/posts/{id}{?q}',
+              cors: true,
+              encoding: 'json',
+              parameterLocation: {
+                id: 'path',
+                q: 'query',
+                token: 'header',
+                content: 'body'
+              }
+            }
+          }
+        }
+      };
+
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(manifestWithLocations));
+
+      const req = createMockRequest({
+        method: 'POST',
+        query: { id: '123', q: 'search', content: 'no' },
+        body: { id: 'bad', q: '', content: 'hello world' },
+        headers: { token: 'tok_abc' }
+      });
+
+      const result = validateRequest(req, 'split_params');
+
+      expect(result).toEqual({ isValid: true });
+    });
+  });
+});

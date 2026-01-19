@@ -4,7 +4,7 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import OpenAI from 'openai';
-import { AuraManifest, AuraState } from 'aura-protocol';
+import { AuraManifest, AuraState, ParameterLocation } from 'aura-protocol';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -289,6 +289,64 @@ export function mapParameters(args: any, parameterMapping: Record<string, string
     return mapped;
 }
 
+export interface ParameterBuckets {
+    path: Record<string, any>;
+    query: Record<string, any>;
+    header: Record<string, any>;
+    body: Record<string, any>;
+    unassigned: Record<string, any>;
+}
+
+/**
+ * Splits parameters into path/query/header/body buckets based on parameterLocation.
+ * Any parameters without an explicit location are returned in "unassigned".
+ */
+export function splitParametersByLocation(
+    params: Record<string, any>,
+    parameterLocation?: Record<string, ParameterLocation>
+): ParameterBuckets {
+    const buckets: ParameterBuckets = {
+        path: {},
+        query: {},
+        header: {},
+        body: {},
+        unassigned: {}
+    };
+
+    if (!parameterLocation || Object.keys(parameterLocation).length === 0) {
+        buckets.unassigned = { ...params };
+        return buckets;
+    }
+
+    for (const [key, value] of Object.entries(params)) {
+        const location = parameterLocation[key];
+        if (!location) {
+            buckets.unassigned[key] = value;
+            continue;
+        }
+
+        switch (location) {
+            case 'path':
+                buckets.path[key] = value;
+                break;
+            case 'query':
+                buckets.query[key] = value;
+                break;
+            case 'header':
+                buckets.header[key] = value;
+                break;
+            case 'body':
+                buckets.body[key] = value;
+                break;
+            default:
+                buckets.unassigned[key] = value;
+                break;
+        }
+    }
+
+    return buckets;
+}
+
 /**
  * Resolves a JSON Pointer path to its value in the given object.
  * Implements RFC 6901 JSON Pointer specification.
@@ -345,45 +403,60 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
         parametersToUse = mapParameters(args, capability.action.parameterMapping);
     }
 
+    const hasParameterLocation = !!(capability.action.parameterLocation && Object.keys(capability.action.parameterLocation).length > 0);
+    const parameterBuckets = splitParametersByLocation(parametersToUse, capability.action.parameterLocation);
+    const templateArgs = hasParameterLocation
+        ? { ...parameterBuckets.path, ...parameterBuckets.query, ...parameterBuckets.unassigned }
+        : parametersToUse;
+
     // Expand URI template with proper RFC 6570 support
-    const expandedUrl = prepareUrlPath(capability.action.urlTemplate, parametersToUse);
+    const expandedUrl = prepareUrlPath(capability.action.urlTemplate, templateArgs);
     const fullUrl = `${baseUrl}${expandedUrl}`;
 
     // Determine request data based on encoding
     let requestData: any = null;
     let queryParams: any = null;
+    let requestHeaders: Record<string, any> | undefined = undefined;
+
+    const fallbackParams = hasParameterLocation ? parameterBuckets.unassigned : parametersToUse;
 
     // For URI templates that include query parameters (e.g., {?param1,param2}),
     // the expansion already handles them, so we only send body data for non-GET methods
-    if (capability.action.encoding === 'json') {
-        // Send parameters in request body as JSON
-        requestData = parametersToUse;
-    } else if (capability.action.encoding === 'query') {
-        // For explicit query encoding, check if the URL already has query parameters
-        // If the URI template expansion created query parameters, don't send duplicates
-        const urlObj = new URL(fullUrl, baseUrl);
-        const urlHasQueryParams = urlObj.search !== '';
-        
-        if (!urlHasQueryParams) {
-            // Only send query params if the URL doesn't already have them from template expansion
-            queryParams = parametersToUse;
+    const urlObj = new URL(fullUrl, baseUrl);
+    const urlHasQueryParams = urlObj.search !== '';
+
+    if (hasParameterLocation) {
+        if (Object.keys(parameterBuckets.header).length > 0) {
+            requestHeaders = { ...parameterBuckets.header };
         }
-        // If URL already has query params from template expansion, don't send additional ones
-    } else {
-        // Fallback to method-based logic for capabilities without explicit encoding
-        if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
-            // For GET/DELETE, only use query params if not already in the URL template
-            const urlObj = new URL(fullUrl, baseUrl);
-            const hasQueryInTemplate = urlObj.search !== '';
-            
-            if (!hasQueryInTemplate) {
-                queryParams = parametersToUse;
+
+        if (Object.keys(parameterBuckets.query).length > 0 && !urlHasQueryParams) {
+            queryParams = { ...parameterBuckets.query };
+        }
+
+        if (Object.keys(parameterBuckets.body).length > 0) {
+            requestData = { ...parameterBuckets.body };
+        }
+    }
+
+    if (Object.keys(fallbackParams).length > 0) {
+        if (capability.action.encoding === 'json') {
+            requestData = requestData ? { ...requestData, ...fallbackParams } : fallbackParams;
+        } else if (capability.action.encoding === 'query') {
+            if (!urlHasQueryParams) {
+                queryParams = queryParams ? { ...queryParams, ...fallbackParams } : fallbackParams;
             }
         } else {
-            // For POST/PUT, send as body unless query parameters are in the template
-            const hasQueryInTemplate = fullUrl.includes('?');
-            if (!hasQueryInTemplate) {
-                requestData = parametersToUse;
+            // Fallback to method-based logic for capabilities without explicit encoding
+            if (capability.action.method === 'GET' || capability.action.method === 'DELETE') {
+                if (!urlHasQueryParams) {
+                    queryParams = queryParams ? { ...queryParams, ...fallbackParams } : fallbackParams;
+                }
+            } else {
+                const hasQueryInTemplate = fullUrl.includes('?');
+                if (!hasQueryInTemplate) {
+                    requestData = requestData ? { ...requestData, ...fallbackParams } : fallbackParams;
+                }
             }
         }
     }
@@ -397,6 +470,7 @@ async function executeAction(baseUrl: string, manifest: AuraManifest, capability
         url: fullUrl,
         data: requestData,
         params: queryParams,
+        headers: requestHeaders,
         validateStatus: () => true, // Accept all status codes
     });
 

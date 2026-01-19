@@ -150,6 +150,143 @@ function convertParameterTypes(params: any, schema: any): any {
   return converted;
 }
 
+const TEMPLATE_OPERATORS = '+#./;?&';
+
+function extractTemplateVariables(template?: string): { path: Set<string>; query: Set<string> } {
+  const path = new Set<string>();
+  const query = new Set<string>();
+
+  if (!template) {
+    return { path, query };
+  }
+
+  const matches = template.matchAll(/\{([^}]+)\}/g);
+  for (const match of matches) {
+    const expression = match[1]?.trim();
+    if (!expression) continue;
+
+    const operator = TEMPLATE_OPERATORS.includes(expression[0]) ? expression[0] : '';
+    const varList = operator ? expression.slice(1) : expression;
+
+    for (const rawVar of varList.split(',')) {
+      const trimmed = rawVar.trim();
+      if (!trimmed) continue;
+      const withoutExplode = trimmed.replace(/\*$/, '');
+      const name = withoutExplode.split(':')[0];
+      if (!name) continue;
+
+      if (operator === '?' || operator === '&') {
+        query.add(name);
+      } else {
+        path.add(name);
+      }
+    }
+  }
+
+  return { path, query };
+}
+
+function normalizeHeaderValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+function pickParams(source: any, allowedKeys?: Set<string>): Record<string, any> {
+  if (!source || typeof source !== 'object') {
+    return {};
+  }
+
+  if (!allowedKeys) {
+    return { ...source };
+  }
+
+  const picked: Record<string, any> = {};
+  for (const key of allowedKeys) {
+    if (source[key] !== undefined) {
+      picked[key] = source[key];
+    }
+  }
+
+  return picked;
+}
+
+function pickHeaderParams(headers: Record<string, any>, allowedKeys?: Set<string>): Record<string, any> {
+  const picked: Record<string, any> = {};
+  if (!headers) return picked;
+
+  if (!allowedKeys) {
+    return picked;
+  }
+
+  for (const key of allowedKeys) {
+    const headerValue = normalizeHeaderValue(headers[key.toLowerCase()]);
+    if (headerValue !== undefined) {
+      picked[key] = headerValue;
+    }
+  }
+
+  return picked;
+}
+
+function splitQueryParamsByTemplate(
+  query: Record<string, any>,
+  urlTemplate?: string,
+  allowedKeys?: Set<string>
+): { pathParams: Record<string, any>; queryParams: Record<string, any> } {
+  const { path: pathVars, query: queryVars } = extractTemplateVariables(urlTemplate);
+  const pathParams: Record<string, any> = {};
+  const queryParams: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(query || {})) {
+    if (allowedKeys && !allowedKeys.has(key)) {
+      continue;
+    }
+
+    if (pathVars.has(key) && !queryVars.has(key)) {
+      pathParams[key] = value;
+      continue;
+    }
+
+    if (queryVars.has(key)) {
+      queryParams[key] = value;
+      continue;
+    }
+
+    if (pathVars.has(key)) {
+      pathParams[key] = value;
+      continue;
+    }
+
+    queryParams[key] = value;
+  }
+
+  return { pathParams, queryParams };
+}
+
+function extractWithPrecedence(
+  req: NextApiRequest,
+  capability: any,
+  allowedKeys?: Set<string>
+): Record<string, any> {
+  const { pathParams, queryParams } = splitQueryParamsByTemplate(
+    (req.query || {}) as Record<string, any>,
+    capability?.action?.urlTemplate,
+    allowedKeys
+  );
+
+  const bodyParams = pickParams(req.body, allowedKeys);
+  const headerParams = pickHeaderParams(req.headers as Record<string, any>, allowedKeys);
+
+  return {
+    ...bodyParams,
+    ...headerParams,
+    ...queryParams,
+    ...pathParams
+  };
+}
+
 /**
  * Extract parameters from request based on HTTP method and encoding
  * This function creates a unified parameters object by:
@@ -158,6 +295,51 @@ function convertParameterTypes(params: any, schema: any): any {
  * 3. Ignoring req.body for GET requests (adheres to web standards)
  */
 function extractRequestParameters(req: NextApiRequest, capability: any): any {
+  const hasParameterLocation = !!(capability?.action?.parameterLocation && Object.keys(capability.action.parameterLocation).length > 0);
+  const schemaKeys = capability?.parameters?.properties
+    ? new Set(Object.keys(capability.parameters.properties))
+    : undefined;
+
+  if (hasParameterLocation) {
+    const parameters: Record<string, any> = {};
+    const locationMap = capability.action.parameterLocation as Record<string, string>;
+
+    for (const [paramName, location] of Object.entries(locationMap)) {
+      let value: any = undefined;
+
+      switch (location) {
+        case 'path':
+        case 'query':
+          value = (req.query as Record<string, any>)[paramName];
+          break;
+        case 'header':
+          value = normalizeHeaderValue((req.headers as Record<string, any>)[paramName.toLowerCase()]);
+          break;
+        case 'body':
+          if (req.body && typeof req.body === 'object') {
+            value = (req.body as Record<string, any>)[paramName];
+          }
+          break;
+        default:
+          value = undefined;
+          break;
+      }
+
+      if (value !== undefined) {
+        parameters[paramName] = value;
+      }
+    }
+
+    const fallbackParams = extractWithPrecedence(req, capability, schemaKeys);
+    for (const [key, value] of Object.entries(fallbackParams)) {
+      if (parameters[key] === undefined) {
+        parameters[key] = value;
+      }
+    }
+
+    return convertParameterTypes(parameters, capability.parameters);
+  }
+
   // Create a new, unified parameters object
   const parameters: any = {};
   
