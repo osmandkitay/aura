@@ -13,39 +13,57 @@
       "uriPattern": "/api/posts/{id}",
       "description": "Blog post resource",
       "operations": {
-        "GET": { "capabilityId": "read_post" },
-        "PUT": { "capabilityId": "update_post" },
-        "DELETE": { "capabilityId": "delete_post" }
+        "GET": {
+          "capabilityId": "read_post"
+        },
+        "PUT": {
+          "capabilityId": "update_post"
+        },
+        "DELETE": {
+          "capabilityId": "delete_post"
+        }
       }
     },
     "posts_collection": {
       "uriPattern": "/api/posts",
       "description": "Collection of blog posts",
       "operations": {
-        "GET": { "capabilityId": "list_posts" },
-        "POST": { "capabilityId": "create_post" }
+        "GET": {
+          "capabilityId": "list_posts"
+        },
+        "POST": {
+          "capabilityId": "create_post"
+        }
       }
     },
     "auth_login": {
       "uriPattern": "/api/auth/login",
       "description": "Authentication login endpoint",
       "operations": {
-        "POST": { "capabilityId": "login" }
+        "POST": {
+          "capabilityId": "login"
+        }
       }
     },
     "auth_logout": {
       "uriPattern": "/api/auth/logout",
       "description": "Authentication logout endpoint",
       "operations": {
-        "POST": { "capabilityId": "logout" }
+        "POST": {
+          "capabilityId": "logout"
+        }
       }
     },
     "user_profile": {
       "uriPattern": "/api/user/profile",
       "description": "User profile endpoint",
       "operations": {
-        "GET": { "capabilityId": "get_profile" },
-        "PUT": { "capabilityId": "update_profile" }
+        "GET": {
+          "capabilityId": "get_profile"
+        },
+        "PUT": {
+          "capabilityId": "update_profile"
+        }
       }
     }
   },
@@ -95,7 +113,10 @@
       "description": "Create a new blog post",
       "parameters": {
         "type": "object",
-        "required": ["title", "content"],
+        "required": [
+          "title",
+          "content"
+        ],
         "properties": {
           "title": {
             "type": "string",
@@ -138,7 +159,9 @@
       "description": "Read a specific blog post",
       "parameters": {
         "type": "object",
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -151,7 +174,6 @@
         "method": "GET",
         "urlTemplate": "/api/posts/{id}",
         "cors": true,
-        "encoding": "query",
         "parameterMapping": {
           "id": "/id"
         }
@@ -163,7 +185,9 @@
       "description": "Update an existing blog post",
       "parameters": {
         "type": "object",
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -210,7 +234,9 @@
       "description": "Delete a blog post",
       "parameters": {
         "type": "object",
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -223,7 +249,6 @@
         "method": "DELETE",
         "urlTemplate": "/api/posts/{id}",
         "cors": true,
-        "encoding": "query",
         "parameterMapping": {
           "id": "/id"
         }
@@ -235,7 +260,10 @@
       "description": "Authenticate user with email and password",
       "parameters": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -325,4 +353,4 @@
     },
     "authHint": "cookie"
   }
-} 
+}

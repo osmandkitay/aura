@@ -1,124 +1,112 @@
-# AURA: The Protocol for a Machine-Readable Web
+# AURA: Agent Usable Resource Assertion
 
-**AURA (Agent-Usable Resource Assertion)** is an open protocol for making websites understandable and operable by AI agents. It proposes a new standard for AI-web interaction that moves beyond fragile screen scraping and DOM manipulation towards a robust, secure, and efficient machine-readable layer for the internet.
-
-The web was built for human eyes. AURA is a specification for giving it a machine-readable "API".
+AURA is an open protocol for making a website's capabilities machine-readable and safe to act on. Instead of scraping UIs, agents read a manifest and call explicit HTTP actions.
 
 [![NPM Version](https://img.shields.io/npm/v/@aura/protocol.svg)](https://www.npmjs.com/package/aura-protocol)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
----
+## How AURA Works
 
-## The Vision: Why AURA?
+- **Manifest (`aura.json`)**: A site serves a machine-readable manifest at `/.well-known/aura.json`.
+- **Capabilities**: Each capability describes a single HTTP action with parameters and a URL template.
+- **AURA-State header**: Each response can include an `AURA-State` header to describe the current context (for example, whether the user is authenticated).
 
-Current AI agents interact with websites in a brittle and inefficient way:
-1. **Screen Scraping:** They "look" at pixels and guess where to click. This is slow, expensive, and breaks with the slightest UI change.
-2. **DOM Manipulation:** They parse complex HTML structures, which are inconsistent across sites and change frequently.
-3. **Insecurity:** Website owners have no control over what an agent might do. 
+## Packages in This Repo
 
-AURA solves this by allowing websites to **declare their capabilities** in a simple, standardized `aura.json` manifest file.
+- `packages/aura-protocol`: TypeScript interfaces and the JSON Schema published as `@aura/protocol` (current version 1.0.3 on npm).
+- `packages/reference-server`: A reference Next.js server showing how to serve a manifest and capabilities. It is a demo only and is not a production dependency.
+- `packages/reference-client`: A reference client and test workflow that consume the protocol.
 
-Instead of an agent guessing how to "create a post," the website explicitly states:
-> *"I have a capability named `create_post`. It's an `HTTP POST` to `/api/posts` and requires `title` and `content` parameters."*
+## Quickstart (Local Demo)
 
-This is a fundamental paradigm shift from *imperative guessing* to *declarative interaction*.
-
-## Core Concepts
-
-* **Manifest (`aura.json`):** A file served at `/.well-known/aura.json` that acts as a site's "API documentation" for AI agents. It defines all available resources and capabilities.
-* **Capability:** A single, discrete action an agent can perform (e.g., `list_posts`, `login`, `update_profile`). Each capability maps to a specific HTTP request.
-* **State (`AURA-State` Header):** A dynamic HTTP header sent by the server with each response, informing the agent about the current context (e.g., is the user authenticated?) and which capabilities are currently available to them.
-
-## This Repository
-
-This repository is the **canonical specification for the AURA protocol**. It provides the core building blocks for the AURA ecosystem:
-
-* **`packages/aura-protocol`**: The core `@aura/protocol` NPM package, containing TypeScript interfaces and the official JSON Schema for validation. **This is the heart of AURA.**
-* **`packages/reference-server`**: A reference implementation of an AURA-enabled server built with Next.js. Use this to understand how to make your own website AURA-compliant.
-* **`packages/reference-client`**: A minimal, backend-only reference client demonstrating two powerful ways to consume the protocol, without any browser or extension required.
- 
-## Getting Started: A 5-Minute Demonstration
-
-See the protocol in action.
-
-### 1. Install Dependencies
-
-From the root of the monorepo, install all necessary dependencies for all packages.
+Install and run the reference server:
 
 ```bash
 pnpm install
-```
-
-### 2. Run the Reference Server
-
-The server is a sample website that "speaks" AURA.
-
-```bash
-# This will start the server (usually on http://localhost:3000)
 pnpm --filter aura-reference-server dev
 ```
 
-You can now visit http://localhost:3000/.well-known/aura.json in your browser to see the manifest.
+Then verify the manifest:
 
-### 3. Run the Reference Agent
+```bash
+curl http://localhost:3000/.well-known/aura.json
+```
 
-This simple agent uses an LLM to understand a prompt and execute a capability on the server.
+## Practical Examples
 
-First, create a `.env` file inside the `packages/reference-client` directory and add your OpenAI API key.
+### Login and Authenticated Action (curl)
+
+```bash
+# Save the auth cookie after login
+curl -i -c cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@aura.dev","password":"password123"}' \
+  http://localhost:3000/api/auth/login
+
+# Use the cookie to create a post
+curl -i -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello","content":"From AURA"}' \
+  http://localhost:3000/api/posts
+```
+
+### Use the Reference Client
+
+Create `packages/reference-client/.env`:
 
 ```
 OPENAI_API_KEY="sk-..."
 ```
 
-Then, run the agent with a URL and a prompt:
+Run an agent prompt:
 
 ```bash
-# (In a new terminal)
-pnpm --filter aura-reference-client agent -- http://localhost:3000 "list all the blog posts"
+pnpm --filter aura-reference-client agent -- http://localhost:3000 "log in and create a post titled Hello"
 ```
 
-Observe how the agent fetches the manifest, plans its action, and executes the list_posts capability directly.
+### Manifest Snippet (Login Capability)
 
-### 4. Run the Crawler (The Big Vision)
-
-This script demonstrates how a search engine could index an AURA-enabled site, understanding its functions, not just its content.
-
-```bash
-# In the client directory
-pnpm --filter aura-reference-client crawler -- http://localhost:3000
+```json
+{
+  "capabilities": {
+    "login": {
+      "id": "login",
+      "v": 1,
+      "description": "Authenticate user with email and password",
+      "parameters": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/api/auth/login",
+        "encoding": "json",
+        "parameterMapping": {
+          "email": "/email",
+          "password": "/password"
+        }
+      }
+    }
+  }
+}
 ```
 
-The output shows a structured JSON object representing the site's capabilities. This is the future of search: indexing actions, not just pages.
+## Build and Test
 
-### 5. Run the Automated Tests & Coverage
-
-The repository ships with a full Vitest suite that exercises the protocol schemas, the reference server API routes, and the URI-template utilities.
-
-```bash
-# From the repo root
-pnpm test --run
-```
-
-An HTML coverage report will be generated in `coverage/`.
-
----
-
-## Building Everything
-
-If you want to make sure the whole monorepo compiles (TypeScript + schema generation), simply run:
+Build everything:
 
 ```bash
 pnpm run build
 ```
 
-This triggers the build in every workspace package and regenerates the official JSON Schemas in `packages/aura-protocol/dist/`.
+Run tests (requires the reference server running on `http://localhost:3000`):
 
-## The Future is a Collaborative Ecosystem
-
-This repository defines the standard. The true power of AURA will be realized when a community builds on top of it. We envision a future with:
-
-* **Adapters** for all major web frameworks (Express, Laravel, Django, Ruby on Rails).
-* **Clients** in every major language (Python, Go, Rust, Java).
-* **Intelligent Applications** 
-
-AURA is a public good. Fork it, build with it, and help us create a more intelligent and interoperable web.
+```bash
+pnpm test
+pnpm --filter aura-reference-client test-workflow http://localhost:3000
+```

@@ -26,42 +26,34 @@ jobs:
     - name: Setup pnpm
       uses: pnpm/action-setup@v2
       with:
-        version: 8
+        version: 10.7.1
     
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
 
-    - name: Build aura-protocol first
+    - name: Build aura-protocol
+      run: pnpm --filter aura-protocol build
+
+    - name: Build and Test
       run: |
-        cd packages/aura-protocol
-        npm run build
-
-    - name: Generate schema files
-      run: |
-        cd packages/aura-protocol
-        npm run generate-schema
-
-    - name: Verify schema files exist
-      run: |
-        ls -la packages/aura-protocol/dist/
-        test -f packages/aura-protocol/dist/aura-v1.0.schema.json
-
-    - name: Build all packages
-      run: pnpm build 
-
-    - name: Build reference-server for production
-      run: pnpm --filter aura-reference-server build
-
-    - name: Run unit & integration tests
-      run: |
+        # Build reference server and client if needed (or rely on just-in-time build if configured, but explicit build is safer)
+        # The original CI built everything, let's keep it safe but optimized
+        pnpm --filter aura-reference-server build
+        pnpm --filter aura-reference-client build
+        
+        # Start server in background
         pnpm --filter aura-reference-server start &
-        # Wait for the server to be ready with health check
+        SERVER_PID=$!
+        
+        # Wait for potential server startup
         timeout 60 bash -c 'until curl -f http://localhost:3000/api/posts > /dev/null 2>&1; do sleep 2; done'
+        
+        # Run all tests
+        echo "Running Unit and Integration Tests..."
         pnpm test
-
-    - name: Run End-to-End Tests
-      run: |
-        pnpm --filter aura-reference-server start &
-        # Wait for the server to be ready with health check
-        timeout 60 bash -c 'until curl -f http://localhost:3000/api/posts > /dev/null 2>&1; do sleep 2; done'
-        pnpm --filter aura-reference-client test-workflow http://localhost:3000 
+        
+        echo "Running End-to-End Tests..."
+        pnpm --filter aura-reference-client test-workflow http://localhost:3000
+        
+        # Stop server
+        kill $SERVER_PID

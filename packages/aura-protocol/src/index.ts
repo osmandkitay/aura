@@ -73,6 +73,11 @@ export interface JSONSchema {
 }
 
 /**
+ * ParameterLocation - Valid locations for parameters in HTTP requests
+ */
+export type ParameterLocation = 'path' | 'query' | 'header' | 'body';
+
+/**
  * HttpAction - Defines how to execute a capability via HTTP
  * Includes security, encoding, and parameter mapping
  */
@@ -85,6 +90,9 @@ export interface HttpAction {
   cors?: boolean;
   // Defines how parameters are sent
   encoding?: 'json' | 'query';
+  // Defines explicit location for parameters.
+  // Precedence: path > query > header > body
+  parameterLocation?: Record<string, ParameterLocation>;
   // Maps capability parameters to the HTTP request using JSON-Pointer syntax
   parameterMapping: Record<string, string>;
 }
@@ -113,4 +121,3 @@ export interface AuraState {
   capabilities?: string[]; // Available capability IDs for current state
 }
 
- 

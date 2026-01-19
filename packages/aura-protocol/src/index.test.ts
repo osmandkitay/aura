@@ -11,11 +11,11 @@ describe('AURA Protocol JSON Schema Validation', () => {
   beforeAll(() => {
     // Load the generated JSON schema
     const schemaPath = path.join(__dirname, '../dist/aura-v1.0.schema.json');
-    
+
     if (!fs.existsSync(schemaPath)) {
       throw new Error(`Schema file not found at ${schemaPath}. Run 'npm run build' first.`);
     }
-    
+
     schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
     ajv = new Ajv.default({ allErrors: true, strict: false });
   });
@@ -132,10 +132,10 @@ describe('AURA Protocol JSON Schema Validation', () => {
     expect(valid).toBe(false);
     expect(validate.errors).not.toBeNull();
     expect(validate.errors!.length).toBeGreaterThan(0);
-    
+
     // Should have an error about protocol value
-    const protocolError = validate.errors!.find(error => 
-      error.instancePath === '/protocol' || 
+    const protocolError = validate.errors!.find(error =>
+      error.instancePath === '/protocol' ||
       (error.instancePath === '' && error.message?.includes('protocol'))
     );
     expect(protocolError).toBeDefined();
@@ -160,9 +160,9 @@ describe('AURA Protocol JSON Schema Validation', () => {
     expect(valid).toBe(false);
     expect(validate.errors).not.toBeNull();
     expect(validate.errors!.length).toBeGreaterThan(0);
-    
+
     // Should have an error about missing name field
-    const nameError = validate.errors!.find(error => 
+    const nameError = validate.errors!.find(error =>
       error.instancePath === '/site' && error.message?.includes('name')
     );
     expect(nameError).toBeDefined();
@@ -318,5 +318,59 @@ describe('AURA Protocol JSON Schema Validation', () => {
 
     // The main schema is currently permissive for resources and capabilities
     expect(valid).toBe(true);
+  });
+
+  it('should validate manifests with parameterLocation field in HttpAction', () => {
+    const manifest = {
+      $schema: 'https://aura.dev/schemas/v1.0.json',
+      protocol: 'AURA',
+      version: '1.0',
+      site: {
+        name: 'Test Site',
+        url: 'https://example.com'
+      },
+      resources: {
+        search: {
+          uriPattern: '/search',
+          description: 'Search',
+          operations: {
+            GET: { capabilityId: 'search' }
+          }
+        }
+      },
+      capabilities: {
+        search: {
+          id: 'search',
+          v: 1,
+          description: 'Search items',
+          parameters: {
+            type: 'object',
+            properties: {
+              q: { type: 'string' },
+              page: { type: 'number' }
+            }
+          },
+          action: {
+            type: 'HTTP',
+            method: 'GET',
+            urlTemplate: '/search',
+            parameterLocation: {
+              q: 'query',
+              page: 'header'
+            },
+            parameterMapping: {
+              q: '/q',
+              page: '/page'
+            }
+          }
+        }
+      }
+    };
+
+    const validate = ajv.compile(schema);
+    const valid = validate(manifest);
+
+    expect(valid).toBe(true);
+    expect(validate.errors).toBeNull();
   });
 }); 
