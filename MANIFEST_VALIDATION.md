@@ -16,19 +16,21 @@ AURA manifest validation ensures your `aura.json` file:
 
 ```bash
 # Install AURA protocol package
-npm install -g @aura/protocol
+npm install aura-protocol
 
 # Validate local manifest
-aura-validate .well-known/aura.json
+npx -y -p aura-protocol aura-validate .well-known/aura.json
 
-# Validate remote manifest
-aura-validate --url https://example.com/.well-known/aura.json
+# Note: Remote URL validation (--url) is currently disabled.
+# Download the manifest first, then validate locally:
+curl -fsSL https://example.com/.well-known/aura.json -o aura.json
+npx -y -p aura-protocol aura-validate aura.json
 
 # Detailed validation
-aura-validate --verbose .well-known/aura.json
+npx -y -p aura-protocol aura-validate --verbose .well-known/aura.json
 
 # Machine-readable output
-aura-validate --json .well-known/aura.json
+npx -y -p aura-protocol aura-validate --json .well-known/aura.json
 ```
 
 ### Programmatic Validation
@@ -36,7 +38,7 @@ aura-validate --json .well-known/aura.json
 ```typescript
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { AuraManifest } from '@aura/protocol';
+import { AuraManifest } from 'aura-protocol';
 
 // Setup validator
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -54,7 +56,7 @@ function validateManifest(manifest: any): { valid: boolean; errors: any[] } {
 ### Core Manifest Structure
 
 **Required Fields:**
-- [ ] `$schema`: Schema URL (`https://aura.dev/schemas/v1.0.json`)
+- [ ] `$schema`: Schema URL (use `https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json` or bundled schema)
 - [ ] `protocol`: Must be `"AURA"`
 - [ ] `version`: Must be `"1.0"`
 - [ ] `site`: Site information object
@@ -106,7 +108,7 @@ Each capability must have:
 **Solution:**
 ```json
 {
-  "$schema": "https://aura.dev/schemas/v1.0.json",
+  "$schema": "https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json",
   "protocol": "AURA",
   "version": "1.0"
 }
@@ -237,12 +239,12 @@ jobs:
           node-version: '18'
           
       - name: Install dependencies
-        run: npm install -g @aura/protocol
+        run: npm install aura-protocol
         
       - name: Validate manifest
         run: |
-          aura-validate public/.well-known/aura.json
-          aura-validate --verbose public/.well-known/aura.json
+          npx -y -p aura-protocol aura-validate public/.well-known/aura.json
+          npx -y -p aura-protocol aura-validate --verbose public/.well-known/aura.json
 ```
 
 ## 🔧 Advanced Validation

@@ -8,14 +8,15 @@ This guide helps you diagnose and fix common AURA protocol implementation issues
 # 1. Verify manifest accessibility
 curl -I https://example.com/.well-known/aura.json
 
-# 2. Validate manifest structure
-npx @aura/protocol aura-validate --url https://example.com/.well-known/aura.json
+# 2. Validate manifest structure (download first, --url is disabled)
+curl -fsSL https://example.com/.well-known/aura.json -o aura.json
+npx -y -p aura-protocol aura-validate aura.json
 
-# 3. Test with AURA client
-npx @aura/reference-client agent -- https://example.com "list capabilities"
+# 3. Test with AURA client (from repo)
+pnpm --filter aura-reference-client agent -- https://example.com "list capabilities"
 
-# 4. Check server connectivity
-npx @aura/reference-client crawler -- https://example.com
+# 4. Check server connectivity (from repo)
+pnpm --filter aura-reference-client crawler -- https://example.com
 ```
 
 ## 🔧 Common Issues
@@ -67,10 +68,10 @@ pnpm build
 **Check Imports:**
 ```typescript
 // ✅ Correct
-import { AuraManifest } from '@aura/protocol';
+import { AuraManifest } from 'aura-protocol';
 
 // ❌ Wrong
-import AuraManifest from '@aura/protocol';
+import AuraManifest from 'aura-protocol';
 ```
 
 ## 🛠️ Debug Tools
@@ -160,8 +161,8 @@ fi
 rm -rf node_modules .next dist
 pnpm install && pnpm build
 
-# Full validation
-npx @aura/protocol aura-validate .well-known/aura.json --verbose
+# Full validation (local file only; --url is disabled)
+npx -y -p aura-protocol aura-validate .well-known/aura.json --verbose
 
 # Test connectivity
 curl -vI https://example.com/.well-known/aura.json

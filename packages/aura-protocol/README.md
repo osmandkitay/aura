@@ -1,21 +1,21 @@
-# @aura/protocol
+# aura-protocol
 
 The core TypeScript definitions and JSON Schema for the AURA protocol.
 
 ## Installation
 
 ```bash
-npm install @aura/protocol
+npm install aura-protocol
 ```
 
 ## Usage
 
 ```typescript
-import { AuraManifest, AuraCapability, AuraState } from '@aura/protocol';
+import { AuraManifest, AuraCapability, AuraState } from 'aura-protocol';
 
 // Use the TypeScript interfaces for type safety
 const manifest: AuraManifest = {
-  $schema: 'https://aura.dev/schemas/v1.0.json',
+  $schema: 'https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json',
   protocol: 'AURA',
   version: '1.0',
   site: {
@@ -162,7 +162,7 @@ Use the generated schemas for runtime validation:
 import Ajv from 'ajv';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AuraManifest } from '@aura/protocol';
+import { AuraManifest } from 'aura-protocol';
 
 // Load and compile schema
 const schemaPath = path.join(__dirname, '../dist/aura-v1.0.schema.json');
@@ -172,7 +172,7 @@ const validate = ajv.compile(schema);
 
 // Validate manifest
 const manifest: AuraManifest = {
-  $schema: 'https://aura.dev/schemas/v1.0.json',
+  $schema: 'https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json',
   protocol: 'AURA',
   version: '1.0',
   site: { name: 'Example', url: 'https://example.com' },
@@ -192,19 +192,21 @@ The package includes a CLI tool for validating AURA manifests:
 
 ```bash
 # Validate local manifest
-npx aura-validate .well-known/aura.json
+npx -y -p aura-protocol aura-validate .well-known/aura.json
 
-# Validate remote manifest
-npx aura-validate --url https://example.com/.well-known/aura.json
+# Note: Remote URL validation (--url) is currently disabled.
+# Download the manifest first, then validate locally:
+curl -fsSL https://example.com/.well-known/aura.json -o aura.json
+npx -y -p aura-protocol aura-validate aura.json
 
 # Detailed validation output
-npx aura-validate --verbose .well-known/aura.json
+npx -y -p aura-protocol aura-validate --verbose .well-known/aura.json
 
 # Machine-readable JSON output
-npx aura-validate --json .well-known/aura.json
+npx -y -p aura-protocol aura-validate --json .well-known/aura.json
 
 # Use custom schema
-npx aura-validate --schema custom-schema.json manifest.json
+npx -y -p aura-protocol aura-validate --schema custom-schema.json manifest.json
 ```
 
 ### Schema Customization
