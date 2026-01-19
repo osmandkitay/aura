@@ -1,5 +1,5 @@
 {
-  "$schema": "https://aura.dev/schemas/v1.0.json",
+  "$schema": "https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json",
   "id": "https://aura-lighthouse.example.com/.well-known/aura.json",
   "protocol": "AURA",
   "version": "1.0",

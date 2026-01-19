@@ -96,11 +96,12 @@ export function middleware(request: NextRequest) {
 # Verify manifest
 curl https://yourdomain.com/.well-known/aura.json
 
-# Validate compliance
-npx @aura/protocol aura-validate --url https://yourdomain.com/.well-known/aura.json
+# Validate compliance (download first, --url is disabled)
+curl -fsSL https://yourdomain.com/.well-known/aura.json -o aura.json
+npx -y -p aura-protocol aura-validate aura.json
 
-# Test with client
-npx @aura/reference-client agent -- https://yourdomain.com "list posts"
+# Test with client (from repo)
+pnpm --filter aura-reference-client agent -- https://yourdomain.com "list posts"
 ```
 
 ## 🛠️ Troubleshooting
