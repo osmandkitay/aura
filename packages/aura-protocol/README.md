@@ -15,7 +15,7 @@ import { AuraManifest, AuraCapability, AuraState } from 'aura-protocol';
 
 // Use the TypeScript interfaces for type safety
 const manifest: AuraManifest = {
-  $schema: 'https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json',
+  $schema: 'https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json',
   protocol: 'AURA',
   version: '1.0',
   site: {
@@ -172,7 +172,7 @@ const validate = ajv.compile(schema);
 
 // Validate manifest
 const manifest: AuraManifest = {
-  $schema: 'https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json',
+  $schema: 'https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json',
   protocol: 'AURA',
   version: '1.0',
   site: { name: 'Example', url: 'https://example.com' },

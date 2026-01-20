@@ -1,6 +1,6 @@
 {
   "name": "aura-protocol",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Core TypeScript definitions and JSON Schema for the AURA protocol - making websites machine-readable for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
