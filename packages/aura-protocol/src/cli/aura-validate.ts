@@ -29,7 +29,7 @@ const main = defineCommand({
     },
     url: {
       type: 'string',
-      description: 'Validate manifest from URL',
+      description: '(Disabled) Validate manifest from URL',
       alias: 'u',
     },
     schema: {

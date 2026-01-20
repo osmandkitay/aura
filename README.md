@@ -177,7 +177,7 @@ Minimal example:
 
 ```json
 {
-  "$schema": "https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json",
+  "$schema": "https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json",
   "protocol": "AURA",
   "version": "1.0",
   "site": {
@@ -193,7 +193,7 @@ A more complete example with a capability:
 
 ```json
 {
-  "$schema": "https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json",
+  "$schema": "https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json",
   "protocol": "AURA",
   "version": "1.0",
   "site": {
@@ -295,7 +295,7 @@ Note: `aura-validate` currently validates local files only. Download remote mani
 The `aura-protocol` package ships:
 
 - TypeScript types for `AuraManifest`, `Resource`, `Capability`, `HttpAction`, and `AuraState`.
-- JSON Schema bundled at `dist/aura-v1.0.schema.json`. For editor tooling, reference the versioned CDN URL: `https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json`.
+- JSON Schema bundled at `dist/aura-v1.0.schema.json`. For editor tooling, reference the versioned CDN URL: `https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json`.
 - `aura-validate` CLI to validate local manifest files and cross-check resource/capability references.
 
 Installation:

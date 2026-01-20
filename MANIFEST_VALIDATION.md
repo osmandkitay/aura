@@ -56,7 +56,7 @@ function validateManifest(manifest: any): { valid: boolean; errors: any[] } {
 ### Core Manifest Structure
 
 **Required Fields:**
-- [ ] `$schema`: Schema URL (use `https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json` or bundled schema)
+- [ ] `$schema`: Schema URL (use `https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json` or bundled schema)
 - [ ] `protocol`: Must be `"AURA"`
 - [ ] `version`: Must be `"1.0"`
 - [ ] `site`: Site information object
@@ -108,7 +108,7 @@ Each capability must have:
 **Solution:**
 ```json
 {
-  "$schema": "https://unpkg.com/aura-protocol@1.0.4/dist/aura-v1.0.schema.json",
+  "$schema": "https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json",
   "protocol": "AURA",
   "version": "1.0"
 }
