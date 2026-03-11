@@ -1,0 +1,98 @@
+{
+  "$schema": "https://unpkg.com/aura-protocol@1.0.5/dist/aura-v1.0.schema.json",
+  "protocol": "AURA",
+  "version": "1.0",
+  "site": {
+    "name": "Upgrade Example",
+    "description": "A small AURA v1 manifest ready for upgrade.",
+    "url": "https://upgrade.example.com"
+  },
+  "resources": {
+    "posts_collection": {
+      "uriPattern": "/posts",
+      "description": "Posts collection",
+      "operations": {
+        "GET": { "capabilityId": "list_posts" },
+        "POST": { "capabilityId": "create_post" }
+      }
+    },
+    "auth_login": {
+      "uriPattern": "/session/login",
+      "description": "Login endpoint",
+      "operations": {
+        "POST": { "capabilityId": "login" }
+      }
+    }
+  },
+  "capabilities": {
+    "list_posts": {
+      "id": "list_posts",
+      "v": 1,
+      "description": "List published posts",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tag": { "type": "string" }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "GET",
+        "urlTemplate": "/posts{?tag}",
+        "encoding": "query",
+        "parameterMapping": {
+          "tag": "/tag"
+        }
+      }
+    },
+    "create_post": {
+      "id": "create_post",
+      "v": 1,
+      "description": "Create a new post",
+      "parameters": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/posts",
+        "encoding": "json",
+        "parameterMapping": {
+          "title": "/title",
+          "content": "/content"
+        }
+      }
+    },
+    "login": {
+      "id": "login",
+      "v": 1,
+      "description": "Authenticate a user",
+      "parameters": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "action": {
+        "type": "HTTP",
+        "method": "POST",
+        "urlTemplate": "/session/login",
+        "encoding": "json",
+        "parameterMapping": {
+          "email": "/email",
+          "password": "/password"
+        }
+      }
+    }
+  },
+  "policy": {
+    "authHint": "cookie"
+  }
+}

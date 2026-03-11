@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-action.schema.json",
+  "title": "AURA 2.0 Action Detail",
+  "description": "A single published AURA action detail file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "id", "key", "title", "intent", "entrypoint", "origin", "confidence"],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-action.schema.json"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+(?:__[1-9][0-9]*)?$"
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "verb"],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
+        },
+        "verb": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
+        }
+      }
+    },
+    "entrypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "method", "path"],
+      "properties": {
+        "type": {
+          "const": "http"
+        },
+        "method": {
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "encoding": {
+          "enum": ["json", "query", "none"]
+        },
+        "parameterLocation": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_.-]+$"
+          },
+          "additionalProperties": {
+            "enum": ["path", "query", "header", "body"]
+          }
+        },
+        "parameterMapping": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_.-]+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^/"
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["none", "cookie", "bearer", "api-key", "oauth2", "unknown"]
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "confirm": {
+      "enum": ["never", "suggested", "required"]
+    },
+    "risk": {
+      "enum": ["low", "medium", "high"]
+    },
+    "input": {
+      "$ref": "http://json-schema.org/draft-07/schema#"
+    },
+    "result": {
+      "$ref": "http://json-schema.org/draft-07/schema#"
+    },
+    "docs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "enum": ["aura-v1", "openapi", "aura-v2"]
+        },
+        "file": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "method": {
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        },
+        "ref": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "score", "reason"],
+      "properties": {
+        "label": {
+          "enum": ["low", "medium", "high"]
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

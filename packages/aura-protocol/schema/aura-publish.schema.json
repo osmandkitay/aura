@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-publish.schema.json",
+  "title": "AURA 2.0 Published Index",
+  "description": "Small published action index written to /.well-known/aura.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "protocol", "version", "site", "actions"],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-publish.schema.json"
+    },
+    "protocol": {
+      "const": "AURA"
+    },
+    "version": {
+      "const": "2.0"
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "key", "title", "intent", "href"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+(?:__[1-9][0-9]*)?$"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "intent": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["domain", "verb"],
+            "properties": {
+              "domain": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
+              },
+              "verb": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
+              }
+            }
+          },
+          "href": {
+            "type": "string",
+            "pattern": "^/.+\\.json$"
+          },
+          "docsHref": {
+            "type": "string",
+            "pattern": "^/.+"
+          },
+          "auth": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "enum": ["none", "cookie", "bearer", "api-key", "oauth2", "unknown"]
+              },
+              "required": {
+                "type": "boolean"
+              }
+            }
+          },
+          "confirm": {
+            "enum": ["never", "suggested", "required"]
+          },
+          "risk": {
+            "enum": ["low", "medium", "high"]
+          }
+        }
+      }
+    }
+  }
+}

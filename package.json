@@ -1,21 +1,19 @@
 {
-  "name": "aura-project",
-  "version": "1.0.3",
-  "description": "AURA: An open protocol for a machine-readable web.",
-  "main": "index.js",
+  "name": "aura",
+  "private": true,
+  "version": "2.0.0-alpha.1",
+  "description": "AURA 2.0 core one-package workspace for deriving and publishing the machine-actionable surface of a site.",
   "scripts": {
-    "build": "pnpm -r run --if-present build",
+    "build": "pnpm --filter aura-protocol build",
     "test": "vitest"
   },
-  "keywords": ["ai", "agent", "protocol", "web", "api", "machine-readable"],
-  "author": "Dervish of AI",
+  "keywords": ["aura", "protocol", "web", "actions"],
   "license": "MIT",
   "packageManager": "pnpm@10.7.1",
   "devDependencies": {
+    "@types/node": "^20.19.2",
     "@vitest/coverage-istanbul": "^3.2.4",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4",
-    "node-mocks-http": "^1.11.0",
-    "@types/node": "^20.19.2"
+    "vitest": "^3.2.4"
   }
 }

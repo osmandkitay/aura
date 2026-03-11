@@ -1,0 +1,185 @@
+{
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-v2.schema.json",
+  "protocol": "AURA",
+  "version": "2.0",
+  "site": {
+    "name": "Minimal Site",
+    "url": "https://minimal.example.com",
+    "description": "A tiny action surface for publishing posts."
+  },
+  "source": {
+    "kind": "openapi",
+    "file": "examples/minimal-site/source/openapi.json"
+  },
+  "actions": [
+    {
+      "id": "session.login",
+      "key": "session.login",
+      "title": "Log in to a session",
+      "intent": {
+        "domain": "session",
+        "verb": "login"
+      },
+      "entrypoint": {
+        "type": "http",
+        "method": "POST",
+        "path": "/session/login",
+        "encoding": "json",
+        "parameterLocation": {
+          "email": "body",
+          "password": "body"
+        },
+        "parameterMapping": {
+          "email": "/email",
+          "password": "/password"
+        }
+      },
+      "auth": {
+        "kind": "none",
+        "required": false
+      },
+      "confirm": "never",
+      "risk": "low",
+      "input": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        },
+        "required": ["email", "password"]
+      },
+      "docs": {
+        "summary": "Log in to a session"
+      },
+      "aliases": ["loginUser", "POST /session/login"],
+      "origin": {
+        "source": "openapi",
+        "file": "examples/minimal-site/source/openapi.json",
+        "path": "/session/login",
+        "operationId": "loginUser",
+        "method": "POST",
+        "ref": "#/paths/~1session~1login/post",
+        "summary": "Log in to a session"
+      },
+      "confidence": {
+        "label": "high",
+        "score": 0.96,
+        "reason": "matched a session login pattern"
+      }
+    },
+    {
+      "id": "post.list",
+      "key": "post.list",
+      "title": "List published posts",
+      "intent": {
+        "domain": "post",
+        "verb": "list"
+      },
+      "entrypoint": {
+        "type": "http",
+        "method": "GET",
+        "path": "/posts",
+        "encoding": "query",
+        "parameterLocation": {
+          "tag": "query"
+        },
+        "parameterMapping": {
+          "tag": "/tag"
+        }
+      },
+      "confirm": "never",
+      "risk": "low",
+      "input": {
+        "type": "object",
+        "properties": {
+          "tag": { "type": "string" }
+        }
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" }
+          }
+        }
+      },
+      "docs": {
+        "summary": "List published posts"
+      },
+      "aliases": ["listPosts", "GET /posts"],
+      "origin": {
+        "source": "openapi",
+        "file": "examples/minimal-site/source/openapi.json",
+        "path": "/posts",
+        "operationId": "listPosts",
+        "method": "GET",
+        "ref": "#/paths/~1posts/get",
+        "summary": "List published posts"
+      },
+      "confidence": {
+        "label": "high",
+        "score": 0.9,
+        "reason": "matched listing vocabulary"
+      }
+    },
+    {
+      "id": "post.publish",
+      "key": "post.publish",
+      "title": "Publish a new post",
+      "intent": {
+        "domain": "post",
+        "verb": "publish"
+      },
+      "entrypoint": {
+        "type": "http",
+        "method": "POST",
+        "path": "/posts",
+        "encoding": "json",
+        "parameterLocation": {
+          "title": "body",
+          "content": "body"
+        },
+        "parameterMapping": {
+          "title": "/title",
+          "content": "/content"
+        }
+      },
+      "confirm": "suggested",
+      "risk": "medium",
+      "input": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" }
+        },
+        "required": ["title", "content"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }
+        }
+      },
+      "docs": {
+        "summary": "Publish a new post"
+      },
+      "aliases": ["publishPost", "POST /posts"],
+      "origin": {
+        "source": "openapi",
+        "file": "examples/minimal-site/source/openapi.json",
+        "path": "/posts",
+        "operationId": "publishPost",
+        "method": "POST",
+        "ref": "#/paths/~1posts/post",
+        "summary": "Publish a new post"
+      },
+      "confidence": {
+        "label": "high",
+        "score": 0.9,
+        "reason": "matched publish vocabulary"
+      }
+    }
+  ]
+}
