@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-action.schema.json",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-action.schema.json",
   "title": "AURA 2.0 Action Detail",
   "description": "A single published AURA action detail file.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": ["$schema", "id", "key", "title", "intent", "entrypoint", "origin", "confidence"],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-action.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-action.schema.json"
     },
     "id": {
       "type": "string",

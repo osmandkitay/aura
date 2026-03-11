@@ -350,6 +350,35 @@ It is the running checklist, black-box log, and final review record for this ref
 - [x] There is no large unfinished subsystem.
 - [x] The repo feels like a core package, not a half-platform.
 
+### Step 8 - Cleanup stale generated output and repo metadata
+
+- [x] Remove committed generated example output so `examples/` keeps only source inputs.
+- [x] Treat `.derived/` and `dist/` as ephemeral local output, not committed example state.
+- [x] Reduce `.github/` to a minimal CI-only shape.
+- [x] Pin schema identifiers to the first 2.0 tag.
+
+#### Black box notes
+
+- Removed tracked example outputs:
+  - `examples/minimal-site/aura-v2.json`
+  - `examples/upgrade-from-v1/aura-v2.json`
+- Ignored local output remains generated, not committed:
+  - `examples/*/.derived/`
+  - `examples/*/dist/.well-known/`
+- Removed stale repo-management templates:
+  - `.github/ISSUE_TEMPLATE/*`
+  - `.github/pull_request_template.md`
+- Release truth tightened:
+  - the first 2.0 tag is `v2.0.0-alpha.1`
+  - 2.0 schema ids pin to that tag
+  - npm may still resolve the older 1.x package line until 2.0 is published
+
+#### Scenario gate
+
+- [x] Examples are source-only in git.
+- [x] `.github/` keeps only minimal CI.
+- [x] Schema ids and release wording match the actual tagged state.
+
 ## Final review questions
 
 1. What became simpler?

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +9,19 @@ type PackageJsonLike = {
   scripts?: Record<string, string>;
   publishConfig?: Record<string, unknown>;
 };
+
+function trackedFiles(...paths: string[]): string[] {
+  const output = execFileSync("git", ["ls-files", ...paths], {
+    cwd: ROOT,
+    encoding: "utf8"
+  });
+
+  return output
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => fs.existsSync(path.join(ROOT, line)));
+}
 
 describe("Scenario A - repo shape truth test", () => {
   it("keeps the repo free of demo weight and tells a truthful one-package release story", () => {
@@ -35,12 +49,18 @@ describe("Scenario A - repo shape truth test", () => {
     expect(protocolPackage.version).toBe(rootPackage.version);
     expect(rootPackage.scripts?.build).toBe("pnpm --filter aura-protocol build");
     expect(protocolPackage.publishConfig).toMatchObject({ access: "public", tag: "alpha" });
+    expect(trackedFiles(".github")).toEqual([".github/workflows/ci.yml"]);
+    expect(trackedFiles("examples")).toEqual([
+      "examples/minimal-site/source/openapi.json",
+      "examples/upgrade-from-v1/source/aura-v1.json"
+    ]);
 
     const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
     expect(readme).not.toContain("aura-reference-server");
     expect(readme).not.toContain("aura-reference-client");
     expect(readme).not.toContain("npx aura-protocol derive");
     expect(readme).toContain("node packages/aura-protocol/dist/cli/aura-protocol.js derive");
+    expect(readme).toContain("Agent-Usable Resource Assertion");
     expect(readme).toContain("one-package workspace");
 
     const ciWorkflow = fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
@@ -49,6 +69,6 @@ describe("Scenario A - repo shape truth test", () => {
 
     const packageReadme = fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "README.md"), "utf8");
     expect(packageReadme).not.toContain("npx aura-protocol derive");
-    expect(packageReadme).toContain("repo-local CLI build");
+    expect(packageReadme).toContain("repo-local CLI");
   });
 });

@@ -1,41 +1,42 @@
 # aura-protocol
 
-`aura-protocol` is the small core package in this repo.
-It derives AURA 2.0 action documents from local source files and publishes a small action index plus per-action detail files.
-It is the compiler and publish surface for this repo, not a hosted runtime or platform framework.
+`aura-protocol` is the small AURA 2.0 core package in this repo.
+It derives, validates, and publishes action surfaces from local files.
+It is an open compiler, not a hosted runtime or platform framework.
 
 ## Repo-local usage
 
-This repo currently tracks the unreleased `aura-protocol@2.0.0-alpha.1` line.
-Use the repo-local CLI build from the repo root:
+This repo tracks `aura-protocol@2.0.0-alpha.1`.
+Use the repo-local CLI from the repo root:
 
 ```bash
 pnpm install
 pnpm build
 
-node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/upgrade-from-v1/source/aura-v1.json
-node packages/aura-protocol/dist/cli/aura-protocol.js publish examples/upgrade-from-v1/.derived/aura-v2.json --out examples/upgrade-from-v1/dist
-node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/upgrade-from-v1/dist/.well-known/aura.json
+node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/source/openapi.json
+node packages/aura-protocol/dist/cli/aura-protocol.js publish examples/minimal-site/.derived/aura-v2.json --out examples/minimal-site/dist
+node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/dist/.well-known/aura.json
 ```
 
-## Package usage
-
-The matching 2.0 alpha package is not assumed to be published yet.
-Until it is, plain `npx aura-protocol` may resolve an older 1.x registry release instead of this repo state.
+Generated `.derived/` and `dist/` output is local and ignored.
 
 ## Supported inputs
 
-- AURA v1 manifest JSON
 - local OpenAPI JSON
-- existing AURA 2.0 JSON
+- local AURA v1 JSON
+- existing local AURA 2.0 JSON
+
+## Release truth
+
+This repo is tagged `v2.0.0-alpha.1`.
+The 2.0 schema URLs are pinned to that Git tag so generated artifacts resolve against this exact schema release.
+The npm package may still resolve older 1.x code until the 2.0 package line is published, so plain `npx aura-protocol` may not match this repo state yet.
 
 ## Package assets
 
 - `dist/aura-v2.schema.json`
 - `dist/aura-action.schema.json`
 - `dist/aura-publish.schema.json`
-
-The derived documents currently use repo-hosted schema URLs so the schema identifiers match what this repo actually ships today.
 
 ## Scope
 

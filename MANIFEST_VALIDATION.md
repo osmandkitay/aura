@@ -9,11 +9,14 @@ This repo validates two AURA 2.0 artifacts:
 
 ```bash
 pnpm build
-node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/aura-v2.json
-node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/upgrade-from-v1/dist/.well-known/aura.json
+node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/source/openapi.json
+node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/.derived/aura-v2.json
+node packages/aura-protocol/dist/cli/aura-protocol.js publish examples/minimal-site/.derived/aura-v2.json --out examples/minimal-site/dist
+node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/dist/.well-known/aura.json
 ```
 
 Use the repo-local CLI here.
+The generated `.derived/` and `dist/` output is local and ignored.
 The matching 2.0 package line is not assumed to be published yet.
 
 ## Schemas

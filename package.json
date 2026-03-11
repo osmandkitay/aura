@@ -2,7 +2,7 @@
   "name": "aura",
   "private": true,
   "version": "2.0.0-alpha.1",
-  "description": "AURA 2.0 core one-package workspace for deriving and publishing the machine-actionable surface of a site.",
+  "description": "AURA 2.0 core workspace for deriving, validating, and publishing small action surfaces from local machine-readable inputs.",
   "scripts": {
     "build": "pnpm --filter aura-protocol build",
     "test": "vitest"

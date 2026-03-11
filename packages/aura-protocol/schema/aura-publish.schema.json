@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-publish.schema.json",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-publish.schema.json",
   "title": "AURA 2.0 Published Index",
   "description": "Small published action index written to /.well-known/aura.json.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": ["$schema", "protocol", "version", "site", "actions"],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-publish.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-publish.schema.json"
     },
     "protocol": {
       "const": "AURA"

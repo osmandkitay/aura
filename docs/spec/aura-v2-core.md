@@ -4,11 +4,16 @@ AURA 2.0 is centered on `actions[]`.
 Each action has a stable semantic key, a normalized intent, an entrypoint, provenance, and confidence.
 When two source actions normalize to the same meaning, AURA keeps the shared semantic `key` and assigns a collision-safe `id` such as `post.create__2`.
 
+## Schema URL strategy
+
+Schema identifiers are pinned to the `v2.0.0-alpha.1` Git tag.
+That keeps derived and published artifacts stable even as `main` moves and matches the first tagged 2.0 alpha release in this repo.
+
 ## Top-level document
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-v2.schema.json",
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-v2.schema.json",
   "protocol": "AURA",
   "version": "2.0",
   "site": { "name": "Example" },

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-v2.schema.json",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-v2.schema.json",
   "title": "AURA 2.0 Document",
   "description": "Action-first AURA document produced by derive and consumed by publish.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": ["$schema", "protocol", "version", "site", "source", "actions"],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/main/packages/aura-protocol/schema/aura-v2.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-v2.schema.json"
     },
     "protocol": {
       "const": "AURA"
