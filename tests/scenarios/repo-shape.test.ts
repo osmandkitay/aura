@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ROOT } from "./helpers";
+import { CLI_PATH, ROOT } from "./helpers";
 
 type PackageJsonLike = {
   version?: string;
@@ -59,6 +59,8 @@ describe("Scenario A - repo shape truth test", () => {
     expect(readme).not.toContain("aura-reference-server");
     expect(readme).not.toContain("aura-reference-client");
     expect(readme).not.toContain("npx aura-protocol derive");
+    expect(readme).toContain("Consumers do not need this repo or package.");
+    expect(readme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
     expect(readme).toContain("node packages/aura-protocol/dist/cli/aura-protocol.js derive");
     expect(readme).toContain("Agent-Usable Resource Assertion");
     expect(readme).toContain("one-package workspace");
@@ -68,7 +70,15 @@ describe("Scenario A - repo shape truth test", () => {
     expect(ciWorkflow).not.toContain("aura-reference-client");
 
     const packageReadme = fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "README.md"), "utf8");
-    expect(packageReadme).not.toContain("npx aura-protocol derive");
-    expect(packageReadme).toContain("repo-local CLI");
+    expect(packageReadme).toContain("Consume AURA Without The Package");
+    expect(packageReadme).toContain("plain `npx aura-protocol` does not yet run this 2.0 code");
+    expect(packageReadme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
+
+    const cliHelp = execFileSync("node", [CLI_PATH, "--help"], {
+      cwd: ROOT,
+      encoding: "utf8"
+    });
+    expect(cliHelp).toContain("Small AURA 2.0 core compiler for local files.");
+    expect(cliHelp).toContain("Published AURA is consumed directly from /.well-known/aura.json without this CLI.");
   });
 });

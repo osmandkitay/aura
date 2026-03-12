@@ -282,6 +282,10 @@ It is the running checklist, black-box log, and final review record for this ref
   - `tests/scenarios/two-command.test.ts`
   - `tests/scenarios/normalization.test.ts`
   - `tests/scenarios/collision-stability.test.ts`
+  - `tests/scenarios/determinism-openapi-order.test.ts`
+  - `tests/scenarios/determinism-v1-order.test.ts`
+  - `tests/scenarios/stable-stringify.test.ts`
+  - `tests/scenarios/openapi-golden-publish.test.ts`
   - `tests/scenarios/no-fake-feature.test.ts`
 - What each one proves:
   - repo-shape: deleted demo weight stays deleted
@@ -289,11 +293,17 @@ It is the running checklist, black-box log, and final review record for this ref
   - two-command: the CLI derive/publish story works end to end
   - normalization: ugly names do not leak back into public semantics
   - collision-stability: duplicate semantic meanings keep a clean `key` and publish through unique `id` locators
+  - determinism-openapi-order: harmless OpenAPI ordering changes do not change derived ids or published output
+  - determinism-v1-order: the small legacy upgrade path stays stable across harmless input reordering
+  - stable-stringify: repeated derive/publish runs emit byte-identical JSON artifacts
+  - openapi-golden-publish: the minimal OpenAPI release story stays locked to the expected derive/publish artifact shape
   - no-fake-feature: forbidden platform creep stays out of the repo
 - Which regressions they prevent:
   - accidental reintroduction of demo packages
   - silent breakage in the derive/publish CLI
   - raw `operationId`/`capabilityId` names leaking into public keys
+  - order-sensitive id allocation and publish href drift
+  - noisy JSON diffs from unstable object or safe-array ordering
   - browser/crawl/platform dependencies sneaking back in
 - Which edge cases remain intentionally unhandled:
   - remote URL inputs

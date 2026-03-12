@@ -3,6 +3,7 @@
 AURA 2.0 is centered on `actions[]`.
 Each action has a stable semantic key, a normalized intent, an entrypoint, provenance, and confidence.
 When two source actions normalize to the same meaning, AURA keeps the shared semantic `key` and assigns a collision-safe `id` such as `post.create__2`.
+Action order and published locators are derived from stable source facts, not from raw source traversal order.
 
 ## Schema URL strategy
 
@@ -48,4 +49,5 @@ That keeps derived and published artifacts stable even as `main` moves and match
 `publish` writes a small index to `/.well-known/aura.json` and one detail file per action under `/.well-known/aura/actions/`.
 The index is intentionally smaller than the derived document.
 Its `href` values point to action detail files by `id`, not by `key`, so semantic key collisions do not corrupt the published surface.
+Derived and published JSON is written in a stable, human-readable form with recursively sorted object keys and safe unordered arrays such as `aliases` and JSON Schema `required` entries canonicalized for clean diffs.
 This is intentionally a well-known discovery artifact, not a hosted registry protocol.

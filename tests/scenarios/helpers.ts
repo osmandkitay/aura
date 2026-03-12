@@ -16,3 +16,22 @@ export function createScenarioTempDir(prefix: string): string {
 export function removeDirectory(directoryPath: string): void {
   fs.rmSync(directoryPath, { recursive: true, force: true });
 }
+
+export function snapshotDirectory(directoryPath: string): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+
+  function walk(currentPath: string): void {
+    for (const entry of fs.readdirSync(currentPath, { withFileTypes: true })) {
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+        continue;
+      }
+
+      snapshot[path.relative(directoryPath, entryPath).split(path.sep).join("/")] = fs.readFileSync(entryPath, "utf8");
+    }
+  }
+
+  walk(directoryPath);
+  return snapshot;
+}

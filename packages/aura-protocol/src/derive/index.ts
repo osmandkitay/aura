@@ -5,6 +5,7 @@ import { validateAuraDocument } from "../validate";
 import { deriveFromAuraV1 } from "./from-aura-v1";
 import { deriveFromOpenApi } from "./from-openapi";
 import { detectInputKind } from "./detect";
+import { canonicalizeDocument } from "./shared";
 
 export interface DeriveOptions {
   outFile?: string;
@@ -22,14 +23,14 @@ export function deriveDocument(value: unknown, options: DeriveOptions = {}): Aur
       throw new Error(`Input is not a valid AURA 2.0 document:\n${validation.errors.join("\n")}`);
     }
 
-    return value as AuraDocument;
+    return canonicalizeDocument(value as AuraDocument);
   }
 
   if (kind === "aura-v1") {
-    return deriveFromAuraV1(value, { sourceFile });
+    return canonicalizeDocument(deriveFromAuraV1(value, { sourceFile }));
   }
 
-  return deriveFromOpenApi(value, { sourceFile });
+  return canonicalizeDocument(deriveFromOpenApi(value, { sourceFile }));
 }
 
 export function deriveFile(inputPath: string, options: DeriveOptions = {}): { document: AuraDocument; outFile: string } {

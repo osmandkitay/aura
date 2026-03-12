@@ -1,7 +1,7 @@
 import { AURA_PROTOCOL_NAME, AURA_V2_SCHEMA_URL, AURA_VERSION } from "../constants";
 import { inferConfirm, inferRisk, normalizeActionSemantics } from "../normalize";
-import { AuraAction, AuraAuth, AuraDocument, AuraIntent, HttpMethod } from "../schema/types";
-import { coalesceTitle, ensureUniqueActionIdentity, normalizeMethod, uniqueStrings } from "./shared";
+import { AuraAuth, AuraDocument, AuraIntent, HttpMethod } from "../schema/types";
+import { AuraActionCandidate, coalesceTitle, finalizeActionCandidates, normalizeMethod, uniqueStrings } from "./shared";
 
 interface AuraV1Policy {
   authHint?: string;
@@ -60,8 +60,7 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
     }
   }
 
-  const keyCounts = new Map<string, number>();
-  const actions: AuraAction[] = [];
+  const actions: AuraActionCandidate[] = [];
 
   for (const [capabilityId, capabilityValue] of Object.entries(manifest.capabilities ?? {})) {
     const capability = capabilityValue as Record<string, any>;
@@ -74,13 +73,11 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
       method,
       path
     });
-    const identity = ensureUniqueActionIdentity(normalized.key, keyCounts);
     const risk = inferRisk(normalized.intent, method);
-    const resourceIds = capabilityResources.get(capabilityId) ?? [];
+    const resourceIds = uniqueStrings(capabilityResources.get(capabilityId) ?? []) ?? [];
 
     actions.push({
-      id: identity.id,
-      key: identity.key,
+      key: normalized.key,
       title: coalesceTitle(capability.description, normalized.intent),
       intent: normalized.intent,
       entrypoint: {
@@ -107,13 +104,7 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
         ref: `/capabilities/${capabilityId}`,
         summary: capability.description
       },
-      confidence: identity.collision
-        ? {
-            label: normalized.confidence.label === "high" ? "medium" : normalized.confidence.label,
-            score: Math.max(0.55, normalized.confidence.score - 0.15),
-            reason: `${normalized.confidence.reason}; a collision-safe id was added while keeping the semantic key stable`
-          }
-        : normalized.confidence
+      confidence: normalized.confidence
     });
   }
 
@@ -130,6 +121,6 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
       kind: "aura-v1",
       file: options.sourceFile
     },
-    actions
+    actions: finalizeActionCandidates(actions)
   };
 }

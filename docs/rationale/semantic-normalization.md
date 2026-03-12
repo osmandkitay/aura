@@ -56,5 +56,6 @@ If two source actions normalize to the same semantic meaning, AURA does not muta
 - `intent` stays aligned with that key
 - `id` carries uniqueness, for example `post.create__2`
 - published `href` locators use `id`, not `key`
+- duplicate groups are ordered deterministically from stable source facts before any `id` suffix is assigned
 
 This keeps public semantics clean while still preserving a stable file-level locator for each action.

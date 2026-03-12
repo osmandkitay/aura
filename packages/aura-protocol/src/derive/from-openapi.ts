@@ -1,7 +1,7 @@
 import { AURA_PROTOCOL_NAME, AURA_V2_SCHEMA_URL, AURA_VERSION } from "../constants";
 import { inferConfirm, inferRisk, normalizeActionSemantics } from "../normalize";
-import { AuraAction, AuraAuth, AuraDocument, HttpMethod, JsonSchema } from "../schema/types";
-import { coalesceTitle, ensureUniqueActionIdentity, normalizeMethod, uniqueStrings } from "./shared";
+import { AuraAuth, AuraDocument, HttpMethod, JsonSchema } from "../schema/types";
+import { AuraActionCandidate, coalesceTitle, finalizeActionCandidates, normalizeMethod, uniqueStrings } from "./shared";
 
 interface DeriveOptions {
   sourceFile?: string;
@@ -207,8 +207,7 @@ function inferAuth(openApi: Record<string, any>, operation: Record<string, any>,
 
 export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): AuraDocument {
   const openApi = value as Record<string, any>;
-  const keyCounts = new Map<string, number>();
-  const actions: AuraAction[] = [];
+  const actions: AuraActionCandidate[] = [];
 
   for (const [pathName, pathValue] of Object.entries(openApi.paths ?? {})) {
     const pathItem = pathValue as Record<string, any>;
@@ -228,15 +227,13 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
         method,
         path: pathName
       });
-      const identity = ensureUniqueActionIdentity(normalized.key, keyCounts);
       const parameters = collectParameters(pathItem, operation);
       const requestBody = operation.requestBody as Record<string, any> | undefined;
       const parameterLocation = buildParameterLocation(parameters, requestBody);
       const risk = inferRisk(normalized.intent, method);
 
       actions.push({
-        id: identity.id,
-        key: identity.key,
+        key: normalized.key,
         title: coalesceTitle(summary ?? operation.description, normalized.intent),
         intent: normalized.intent,
         entrypoint: {
@@ -247,7 +244,7 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
           parameterLocation,
           parameterMapping: buildParameterMapping(parameterLocation)
         },
-        auth: inferAuth(openApi, operation, identity.key),
+        auth: inferAuth(openApi, operation, normalized.key),
         confirm: inferConfirm(risk),
         risk,
         input: buildInputSchema(parameters, requestBody),
@@ -263,13 +260,7 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
           ref: `#/paths/${pointerSegment(pathName)}/${methodName}`,
           summary: summary ?? operation.description
         },
-        confidence: identity.collision
-          ? {
-              label: normalized.confidence.label === "high" ? "medium" : normalized.confidence.label,
-              score: Math.max(0.55, normalized.confidence.score - 0.15),
-              reason: `${normalized.confidence.reason}; a collision-safe id was added while keeping the semantic key stable`
-            }
-          : normalized.confidence
+        confidence: normalized.confidence
       });
     }
   }
@@ -287,6 +278,6 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
       kind: "openapi",
       file: options.sourceFile
     },
-    actions
+    actions: finalizeActionCandidates(actions)
   };
 }

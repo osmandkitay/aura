@@ -1,3 +1,4 @@
+import { stableStringify } from "../canonical";
 import { deriveFile } from "../derive";
 import { publishFile } from "../publish";
 import { defaultDeriveOutputPath } from "../filesystem";
@@ -42,7 +43,20 @@ function hasFlag(parsed: ParsedArgs, name: string): boolean {
 }
 
 function printHelp(): void {
-  console.log(`aura-protocol\n\nCommands:\n  derive <input> [--out <file>] [--stdout]\n  publish <input> --out <dir>\n  validate <file>\n\nDefaults:\n  derive writes to a sibling .derived/aura-v2.json when --out is omitted.`);
+  console.log(
+    `aura-protocol
+
+Small AURA 2.0 core compiler for local files.
+Published AURA is consumed directly from /.well-known/aura.json without this CLI.
+
+Commands:
+  derive <input> [--out <file>] [--stdout]
+  publish <input> --out <dir>
+  validate <file>
+
+Defaults:
+  derive writes to a sibling .derived/aura-v2.json when --out is omitted.`
+  );
 }
 
 function printCommandHelp(command: string): void {
@@ -96,7 +110,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       });
 
       if (hasFlag(parsed, "stdout")) {
-        console.log(JSON.stringify(result.document, null, 2));
+        process.stdout.write(stableStringify(result.document));
       } else {
         console.log(`Derived ${input} -> ${result.outFile}`);
       }

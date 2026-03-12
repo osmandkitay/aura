@@ -13,7 +13,7 @@ describe("Scenario B - v1 upgrade test", () => {
     const validation = validateAuraDocument(document);
 
     expect(validation.valid).toBe(true);
-    expect(document.actions.map((action) => action.key)).toEqual(["post.list", "post.create", "session.login"]);
+    expect(document.actions.map((action) => action.key)).toEqual(["session.login", "post.create", "post.list"]);
 
     const createAction = document.actions.find((action) => action.key === "post.create");
     expect(createAction?.aliases).toContain("create_post");

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { stableStringify } from "./canonical";
 
 export function ensureDirectory(directoryPath: string): void {
   fs.mkdirSync(directoryPath, { recursive: true });
@@ -19,7 +20,7 @@ export function readJsonFile<T>(filePath: string): T {
 
 export function writeJsonFile(filePath: string, value: unknown): void {
   ensureDirectory(path.dirname(filePath));
-  fs.writeFileSync(path.resolve(filePath), `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  fs.writeFileSync(path.resolve(filePath), stableStringify(value), "utf8");
 }
 
 export function defaultDeriveOutputPath(inputPath: string): string {

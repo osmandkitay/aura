@@ -4,6 +4,7 @@ import { AURA_ACTION_SCHEMA_URL, AURA_PUBLISH_SCHEMA_URL } from "../constants";
 import { ensureDirectory, readJsonFile, relativePortablePath, writeJsonFile } from "../filesystem";
 import { AuraDocument, PublishedAuraAction, PublishedAuraIndex } from "../schema/types";
 import { deriveDocument } from "../derive";
+import { canonicalizeDocument } from "../derive/shared";
 import { validateAuraDocument, validatePublishedAction, validatePublishedIndex } from "../validate";
 
 export interface PublishResult {
@@ -73,7 +74,8 @@ function assertPublishedSurfaceIntegrity(outputRoot: string, index: PublishedAur
 }
 
 export function publishDocument(document: AuraDocument, outDirectory: string): PublishResult {
-  const validatedDocument = validateAuraDocument(document);
+  const canonicalDocument = canonicalizeDocument(document);
+  const validatedDocument = validateAuraDocument(canonicalDocument);
   if (!validatedDocument.valid) {
     throw new Error(`Derived document failed validation:\n${validatedDocument.errors.join("\n")}`);
   }
@@ -85,7 +87,7 @@ export function publishDocument(document: AuraDocument, outDirectory: string): P
 
   const actionPaths: string[] = [];
   const publishedActions: PublishedAuraAction[] = [];
-  for (const action of document.actions) {
+  for (const action of canonicalDocument.actions) {
     const publishedAction = toPublishedAction(action);
     const actionValidation = validatePublishedAction(publishedAction);
     if (!actionValidation.valid) {
@@ -98,7 +100,7 @@ export function publishDocument(document: AuraDocument, outDirectory: string): P
     publishedActions.push(publishedAction);
   }
 
-  const index = toPublishedIndex(document);
+  const index = toPublishedIndex(canonicalDocument);
   const indexValidation = validatePublishedIndex(index);
   if (!indexValidation.valid) {
     throw new Error(`Published index failed validation:\n${indexValidation.errors.join("\n")}`);
@@ -110,7 +112,7 @@ export function publishDocument(document: AuraDocument, outDirectory: string): P
   assertPublishedSurfaceIntegrity(outputRoot, index, publishedActions);
 
   return {
-    derived: document,
+    derived: canonicalDocument,
     index,
     indexPath,
     actionPaths

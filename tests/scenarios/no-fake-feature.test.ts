@@ -25,5 +25,9 @@ describe("Scenario E - no fake feature test", () => {
     const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
     expect(readme).toContain("it does not crawl the web");
     expect(readme).toContain("it does not automate browsers");
+    expect(readme).toContain("it does not host a bridge, index, or signing service");
+
+    const packageReadme = fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "README.md"), "utf8");
+    expect(packageReadme).toContain("not a hosted runtime or framework");
   });
 });

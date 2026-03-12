@@ -16,14 +16,17 @@ describe("Scenario F - semantic collision stability test", () => {
     expect(validation.valid).toBe(true);
     expect(document.actions.map((action) => action.key)).toEqual(["post.create", "post.create"]);
     expect(document.actions.map((action) => action.id)).toEqual(["post.create", "post.create__2"]);
+    expect(document.actions.map((action) => action.origin.path)).toEqual(["/articles", "/posts"]);
     expect(document.actions.map((action) => action.intent)).toEqual([
       { domain: "post", verb: "create" },
       { domain: "post", verb: "create" }
     ]);
 
+    const firstAction = document.actions.find((action) => action.id === "post.create");
     const secondAction = document.actions.find((action) => action.id === "post.create__2");
-    expect(secondAction?.aliases).toContain("createArticle");
-    expect(secondAction?.origin.operationId).toBe("createArticle");
+    expect(firstAction?.origin.operationId).toBe("createArticle");
+    expect(secondAction?.origin.operationId).toBe("createPost");
+    expect(secondAction?.aliases).toContain("createPost");
 
     const scenarioRoot = createScenarioTempDir("aura-scenario-f-");
 

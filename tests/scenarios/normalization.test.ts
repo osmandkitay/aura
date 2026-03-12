@@ -11,7 +11,7 @@ describe("Scenario D - ugly naming normalization test", () => {
       sourceFile: "packages/aura-protocol/fixtures/ugly-openapi.json"
     });
 
-    expect(document.actions.map((action) => action.key)).toEqual(["account.create", "thing.perform", "post.create"]);
+    expect(document.actions.map((action) => action.key)).toEqual(["post.create", "thing.perform", "account.create"]);
 
     const uglyAction = document.actions.find((action) => action.key === "thing.perform");
     expect(uglyAction?.aliases).toContain("doThingFinal");
