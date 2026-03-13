@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { AURA_ACTION_SCHEMA_URL, AURA_PUBLISH_SCHEMA_URL } from "../constants";
-import { ensureDirectory, readJsonFile, relativePortablePath, writeJsonFile } from "../filesystem";
+import { ensureDirectory, readJsonFile, writeJsonFile } from "../filesystem";
 import { AuraDocument, PublishedAuraAction, PublishedAuraIndex } from "../schema/types";
 import { deriveDocument } from "../derive";
 import { canonicalizeDocument } from "../derive/shared";
@@ -121,6 +121,6 @@ export function publishDocument(document: AuraDocument, outDirectory: string): P
 
 export function publishFile(inputPath: string, outDirectory: string): PublishResult {
   const source = readJsonFile<unknown>(inputPath);
-  const derived = deriveDocument(source, { sourceFile: relativePortablePath(inputPath) });
+  const derived = deriveDocument(source);
   return publishDocument(derived, outDirectory);
 }

@@ -47,6 +47,7 @@ Raw names remain machine-readable in two places:
 - `origin.operationId` or `origin.capability`
 
 That keeps the published key stable without throwing away the source signal.
+Default canonical artifacts keep that portable provenance while omitting local file-path trace.
 
 ## Collision policy
 
@@ -54,8 +55,10 @@ If two source actions normalize to the same semantic meaning, AURA does not muta
 
 - `key` stays semantic, for example `post.create`
 - `intent` stays aligned with that key
-- `id` carries uniqueness, for example `post.create__2`
+- `id` carries uniqueness as a durable locator, for example `post.create__7a4d3c91b2ef`
 - published `href` locators use `id`, not `key`
-- duplicate groups are ordered deterministically from stable source facts before any `id` suffix is assigned
+- duplicate groups are ordered deterministically from the same source identity facts used to derive the hash suffix
+- the locator seed includes only `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, `origin.operationId` or `origin.capability`, and `origin.resource`
+- mutable derived fields such as `title`, `docs`, `aliases`, `confidence`, and `origin.summary` do not affect locator identity
 
-This keeps public semantics clean while still preserving a stable file-level locator for each action.
+This keeps public semantics clean while giving agents a durable web locator that does not renumber when a new colliding sibling appears.

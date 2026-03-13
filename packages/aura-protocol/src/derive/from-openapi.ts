@@ -3,10 +3,6 @@ import { inferConfirm, inferRisk, normalizeActionSemantics } from "../normalize"
 import { AuraAuth, AuraDocument, HttpMethod, JsonSchema } from "../schema/types";
 import { AuraActionCandidate, coalesceTitle, finalizeActionCandidates, normalizeMethod, uniqueStrings } from "./shared";
 
-interface DeriveOptions {
-  sourceFile?: string;
-}
-
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 
 type OpenApiMethod = (typeof METHODS)[number];
@@ -205,7 +201,7 @@ function inferAuth(openApi: Record<string, any>, operation: Record<string, any>,
   return undefined;
 }
 
-export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): AuraDocument {
+export function deriveFromOpenApi(value: unknown): AuraDocument {
   const openApi = value as Record<string, any>;
   const actions: AuraActionCandidate[] = [];
 
@@ -253,7 +249,6 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
         aliases: uniqueStrings([operation.operationId, `${method} ${pathName}`]),
         origin: {
           source: "openapi",
-          file: options.sourceFile,
           path: pathName,
           operationId: operation.operationId,
           method,
@@ -275,8 +270,7 @@ export function deriveFromOpenApi(value: unknown, options: DeriveOptions = {}): 
       description: openApi.info?.description
     },
     source: {
-      kind: "openapi",
-      file: options.sourceFile
+      kind: "openapi"
     },
     actions: finalizeActionCandidates(actions)
   };

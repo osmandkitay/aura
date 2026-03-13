@@ -3,6 +3,15 @@
 This note freezes the repo's starting point before the AURA 2.0 core rewrite.
 It is the running checklist, black-box log, and final review record for this refactor.
 
+## Current 2.0 truth
+
+- AURA 2.0 is the mainline derive/publish story in this repo.
+- AURA v1 remains only as a legacy migration input.
+- Semantic `key` and published locator `id` are intentionally separate.
+- Collision ids publish as `key__<hash>` locators derived from stable source identity facts, not numeric suffixes or full representation hashes.
+- Default canonical artifacts are repo-path-free: `source.file` and `origin.file` are not published.
+- Final action order is settled in finalization, not silently repaired later by canonical cleanup.
+
 ## Progress
 
 ### Step 0 - Baseline and freeze the current truth
@@ -256,7 +265,7 @@ It is the running checklist, black-box log, and final review record for this ref
   - browser automation
   - hosted bridge/index/signing systems
 - Migration message for existing users:
-  - v1 manifests remain valid as migration input, but the authored center is now `actions[]`
+  - v1 manifests remain valid as legacy migration input, but the authored center is now `actions[]`
 - Future seams documented but not implemented:
   - `docs/rationale/architecture-seams.md`
   - README architecture seams section
@@ -292,7 +301,7 @@ It is the running checklist, black-box log, and final review record for this ref
   - v1-upgrade: v1 manifests still derive into valid action-first output
   - two-command: the CLI derive/publish story works end to end
   - normalization: ugly names do not leak back into public semantics
-  - collision-stability: duplicate semantic meanings keep a clean `key` and publish through unique `id` locators
+  - collision-stability: duplicate semantic meanings keep a clean `key` and publish through unique hash-based `id` locators
   - determinism-openapi-order: harmless OpenAPI ordering changes do not change derived ids or published output
   - determinism-v1-order: the small legacy upgrade path stays stable across harmless input reordering
   - stable-stringify: repeated derive/publish runs emit byte-identical JSON artifacts
@@ -399,9 +408,9 @@ It is the running checklist, black-box log, and final review record for this ref
    - `node packages/aura-protocol/dist/cli/aura-protocol.js derive <local-source>`
    - `node packages/aura-protocol/dist/cli/aura-protocol.js publish <derived-aura-v2.json> --out <dir>`
 4. What input formats are truly supported today?
-   - local AURA v1 JSON
    - local OpenAPI JSON
    - existing local AURA 2.0 JSON
+   - local AURA v1 JSON as a legacy migration input
 5. What did we deliberately defer?
    - remote URL discovery, crawling, browser automation, hosted bridge/index/sign services, and wide OpenAPI edge-case coverage.
 6. What future repos can plug into this cleanly later?

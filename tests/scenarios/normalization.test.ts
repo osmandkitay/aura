@@ -7,11 +7,9 @@ describe("Scenario D - ugly naming normalization test", () => {
   it("normalizes ugly names while preserving raw provenance and confidence", () => {
     const fixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "ugly-openapi.json");
     const fixture = readJson<unknown>(fixturePath);
-    const document = deriveDocument(fixture, {
-      sourceFile: "packages/aura-protocol/fixtures/ugly-openapi.json"
-    });
+    const document = deriveDocument(fixture);
 
-    expect(document.actions.map((action) => action.key)).toEqual(["post.create", "thing.perform", "account.create"]);
+    expect(document.actions.map((action) => action.key)).toEqual(["account.create", "post.create", "thing.perform"]);
 
     const uglyAction = document.actions.find((action) => action.key === "thing.perform");
     expect(uglyAction?.aliases).toContain("doThingFinal");

@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { AuraAction } from "../../packages/aura-protocol/src";
 
 export const ROOT = path.resolve(__dirname, "..", "..");
 export const CLI_PATH = path.join(ROOT, "packages", "aura-protocol", "dist", "cli", "aura-protocol.js");
@@ -34,4 +36,19 @@ export function snapshotDirectory(directoryPath: string): Record<string, string>
 
   walk(directoryPath);
   return snapshot;
+}
+
+export function locatorIdentitySeed(action: Pick<AuraAction, "entrypoint" | "origin">): string {
+  return JSON.stringify({
+    method: action.entrypoint.method,
+    operation: action.origin.operationId ?? action.origin.capability ?? "",
+    path: action.entrypoint.path,
+    ref: action.origin.ref ?? "",
+    resource: action.origin.resource ?? "",
+    source: action.origin.source
+  });
+}
+
+export function locatorHashSuffix(action: Pick<AuraAction, "entrypoint" | "origin">, length = 12): string {
+  return createHash("sha256").update(locatorIdentitySeed(action)).digest("hex").slice(0, length);
 }

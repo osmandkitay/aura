@@ -15,12 +15,8 @@ describe("Scenario H - deterministic v1 order", () => {
       capabilities: Object.fromEntries(Object.entries((fixture.capabilities ?? {}) as Record<string, unknown>).reverse())
     };
 
-    const baseline = deriveDocument(fixture, {
-      sourceFile: "examples/upgrade-from-v1/source/aura-v1.json"
-    });
-    const reordered = deriveDocument(reorderedFixture, {
-      sourceFile: "examples/upgrade-from-v1/source/aura-v1.json"
-    });
+    const baseline = deriveDocument(fixture);
+    const reordered = deriveDocument(reorderedFixture);
 
     expect(reordered.actions.map((action) => action.id)).toEqual(baseline.actions.map((action) => action.id));
 

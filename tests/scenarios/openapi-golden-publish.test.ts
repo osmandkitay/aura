@@ -9,9 +9,7 @@ describe("Scenario J - OpenAPI golden publish", () => {
   it("keeps the minimal OpenAPI derive/publish story locked to the expected release artifact shape", () => {
     const fixturePath = path.join(ROOT, "examples", "minimal-site", "source", "openapi.json");
     const fixture = readJson<unknown>(fixturePath);
-    const document = deriveDocument(fixture, {
-      sourceFile: "examples/minimal-site/source/openapi.json"
-    });
+    const document = deriveDocument(fixture);
     const scenarioRoot = createScenarioTempDir("aura-scenario-j-");
 
     try {
@@ -30,8 +28,7 @@ describe("Scenario J - OpenAPI golden publish", () => {
           description: "A tiny action surface for publishing posts."
         },
         source: {
-          kind: "openapi",
-          file: "examples/minimal-site/source/openapi.json"
+          kind: "openapi"
         },
         actions: [
           {
@@ -69,7 +66,6 @@ describe("Scenario J - OpenAPI golden publish", () => {
             aliases: ["GET /posts", "listPosts"],
             origin: {
               source: "openapi",
-              file: "examples/minimal-site/source/openapi.json",
               path: "/posts",
               operationId: "listPosts",
               method: "GET",
@@ -115,7 +111,6 @@ describe("Scenario J - OpenAPI golden publish", () => {
             aliases: ["POST /posts", "publishPost"],
             origin: {
               source: "openapi",
-              file: "examples/minimal-site/source/openapi.json",
               path: "/posts",
               operationId: "publishPost",
               method: "POST",
@@ -156,7 +151,6 @@ describe("Scenario J - OpenAPI golden publish", () => {
             aliases: ["POST /session/login", "loginUser"],
             origin: {
               source: "openapi",
-              file: "examples/minimal-site/source/openapi.json",
               path: "/session/login",
               operationId: "loginUser",
               method: "POST",

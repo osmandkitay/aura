@@ -2,6 +2,7 @@
 
 Agent-Usable Resource Assertion.
 This repo is the small AURA 2.0 core for deriving, validating, and publishing the machine-actionable surface of a site from local machine-readable inputs.
+It keeps semantic action keys clean and publishes durable action locators for the open web.
 It is a small open compiler, not a hosted product or framework.
 
 The repo stays a one-package workspace on purpose: the releasable core lives in `packages/aura-protocol`, while docs, examples, and scenario tests stay at the root.
@@ -43,14 +44,16 @@ Those exact-version commands are the intended package story, but they are not va
 ## Supported Inputs Today
 
 - local OpenAPI JSON
-- local AURA v1 JSON
 - existing local AURA 2.0 JSON
+- local AURA v1 JSON as a legacy migration input
 
 ## What This Repo Does
 
 - derives an action-first AURA 2.0 document
 - keeps semantic `key` separate from stable locator `id`
-- preserves source provenance in `aliases` and `origin`
+- publishes colliding actions through `key__<hash>` locators derived from source identity facts, not renumbered suffixes
+- preserves portable provenance in `aliases` and `origin`
+- omits local repo file paths such as `source.file` and `origin.file` from default derived and published artifacts
 - validates derived and published artifacts with JSON Schema
 - publishes a small well-known index and per-action detail files
 - writes deterministic, human-readable JSON artifacts for clean diffs
@@ -65,7 +68,7 @@ Those exact-version commands are the intended package story, but they are not va
 
 ## For v1 Users
 
-V1 remains a small migration input path.
+AURA v1 remains a legacy migration input path; AURA 2.0 is the mainline.
 This repo does not treat `resources`, `capabilities`, or `AURA-State` as the authored center anymore.
 V1 manifests are converted into `actions[]`, and raw v1 names are retained only as provenance.
 

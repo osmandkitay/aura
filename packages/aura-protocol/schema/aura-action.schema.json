@@ -12,7 +12,7 @@
     },
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+(?:__[1-9][0-9]*)?$"
+      "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+(?:__[a-f0-9]{12,64})?$"
     },
     "key": {
       "type": "string",
@@ -129,9 +129,6 @@
       "properties": {
         "source": {
           "enum": ["aura-v1", "openapi", "aura-v2"]
-        },
-        "file": {
-          "type": "string"
         },
         "path": {
           "type": "string"

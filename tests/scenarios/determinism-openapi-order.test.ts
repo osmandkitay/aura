@@ -14,12 +14,8 @@ describe("Scenario G - deterministic OpenAPI order", () => {
       paths: Object.fromEntries(Object.entries((fixture.paths ?? {}) as Record<string, unknown>).reverse())
     };
 
-    const baseline = deriveDocument(fixture, {
-      sourceFile: "packages/aura-protocol/fixtures/collision-openapi.json"
-    });
-    const reordered = deriveDocument(reorderedFixture, {
-      sourceFile: "packages/aura-protocol/fixtures/collision-openapi.json"
-    });
+    const baseline = deriveDocument(fixture);
+    const reordered = deriveDocument(reorderedFixture);
 
     expect(reordered.actions.map((action) => action.id)).toEqual(baseline.actions.map((action) => action.id));
     expect(reordered.actions.map((action) => action.key)).toEqual(baseline.actions.map((action) => action.key));

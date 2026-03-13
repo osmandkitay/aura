@@ -39,7 +39,6 @@ export interface AuraDocs {
 
 export interface AuraOrigin {
   source: AuraInputKind;
-  file?: string;
   path?: string;
   resource?: string;
   capability?: string;
@@ -75,7 +74,6 @@ export interface AuraAction {
 
 export interface AuraDocumentSource {
   kind: AuraInputKind;
-  file?: string;
 }
 
 export interface AuraDocument {

@@ -27,15 +27,9 @@ describe("Scenario I - stable stringify", () => {
       reorderedFixture.paths["/posts"].get.responses["200"].content["application/json"].schema.items.properties
     );
 
-    const baseline = deriveDocument(fixture, {
-      sourceFile: "examples/minimal-site/source/openapi.json"
-    });
-    const repeated = deriveDocument(fixture, {
-      sourceFile: "examples/minimal-site/source/openapi.json"
-    });
-    const reordered = deriveDocument(reorderedFixture, {
-      sourceFile: "examples/minimal-site/source/openapi.json"
-    });
+    const baseline = deriveDocument(fixture);
+    const repeated = deriveDocument(fixture);
+    const reordered = deriveDocument(reorderedFixture);
 
     const scenarioRoot = createScenarioTempDir("aura-scenario-i-");
 

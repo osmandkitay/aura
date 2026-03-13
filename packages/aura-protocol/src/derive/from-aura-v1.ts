@@ -7,10 +7,6 @@ interface AuraV1Policy {
   authHint?: string;
 }
 
-interface DeriveOptions {
-  sourceFile?: string;
-}
-
 function inferEncoding(action: Record<string, unknown>, method: HttpMethod): "json" | "query" | "none" {
   if (action.encoding === "json" || action.encoding === "query") {
     return action.encoding;
@@ -43,7 +39,7 @@ function inferAuth(policy: AuraV1Policy | undefined, intent: AuraIntent): AuraAu
   return { kind: "unknown" };
 }
 
-export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): AuraDocument {
+export function deriveFromAuraV1(value: unknown): AuraDocument {
   const manifest = value as Record<string, any>;
   const capabilityResources = new Map<string, string[]>();
 
@@ -96,7 +92,6 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
       aliases: uniqueStrings([capabilityId, ...resourceIds]),
       origin: {
         source: "aura-v1",
-        file: options.sourceFile,
         path,
         resource: resourceIds[0],
         capability: capabilityId,
@@ -118,8 +113,7 @@ export function deriveFromAuraV1(value: unknown, options: DeriveOptions = {}): A
       description: manifest.site?.description
     },
     source: {
-      kind: "aura-v1",
-      file: options.sourceFile
+      kind: "aura-v1"
     },
     actions: finalizeActionCandidates(actions)
   };

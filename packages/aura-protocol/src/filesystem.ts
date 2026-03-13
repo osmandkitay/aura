@@ -29,11 +29,3 @@ export function defaultDeriveOutputPath(inputPath: string): string {
   const outputRoot = path.basename(inputDirectory) === "source" ? path.dirname(inputDirectory) : inputDirectory;
   return path.join(outputRoot, ".derived", "aura-v2.json");
 }
-
-export function toPortablePath(filePath: string): string {
-  return filePath.split(path.sep).join("/");
-}
-
-export function relativePortablePath(filePath: string): string {
-  return toPortablePath(path.relative(process.cwd(), path.resolve(filePath)) || path.basename(filePath));
-}

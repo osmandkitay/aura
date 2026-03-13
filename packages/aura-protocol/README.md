@@ -2,6 +2,7 @@
 
 `aura-protocol` is the small AURA 2.0 core package in this repo.
 It derives, validates, and publishes action surfaces from local files.
+It keeps semantic keys clean and publishes durable action locators from source identity facts.
 It is a compiler and publisher, not a hosted runtime or framework.
 
 ## Consume AURA Without The Package
@@ -40,8 +41,8 @@ Generated `.derived/` and `dist/` output is local and ignored.
 ## Supported Inputs
 
 - local OpenAPI JSON
-- local AURA v1 JSON
 - existing local AURA 2.0 JSON
+- local AURA v1 JSON as a legacy migration input
 
 ## Package Assets
 
@@ -53,4 +54,6 @@ Generated `.derived/` and `dist/` output is local and ignored.
 
 This package does not crawl, automate browsers, or host remote services.
 It only derives, validates, and publishes the machine-actionable surface described by local input files.
+Collision groups publish through `key__<hash>` locators derived from stable source identity facts rather than numeric renumbering or full representation hashes.
+Default derived and published artifacts are repo-path-free: they keep portable provenance, but omit local file traces such as `source.file` and `origin.file`.
 Future crawl, bridge, index, or signing systems should consume these artifacts from separate repos.

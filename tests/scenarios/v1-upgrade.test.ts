@@ -7,17 +7,17 @@ describe("Scenario B - v1 upgrade test", () => {
   it("derives a valid action-first document from a v1 manifest", () => {
     const fixturePath = path.join(ROOT, "examples", "upgrade-from-v1", "source", "aura-v1.json");
     const fixture = readJson<unknown>(fixturePath);
-    const document = deriveDocument(fixture, {
-      sourceFile: "examples/upgrade-from-v1/source/aura-v1.json"
-    });
+    const document = deriveDocument(fixture);
     const validation = validateAuraDocument(document);
 
     expect(validation.valid).toBe(true);
-    expect(document.actions.map((action) => action.key)).toEqual(["session.login", "post.create", "post.list"]);
+    expect(document.source).toEqual({ kind: "aura-v1" });
+    expect(document.actions.map((action) => action.key)).toEqual(["post.create", "post.list", "session.login"]);
 
     const createAction = document.actions.find((action) => action.key === "post.create");
     expect(createAction?.aliases).toContain("create_post");
     expect(createAction?.origin.capability).toBe("create_post");
+    expect(createAction?.origin).not.toHaveProperty("file");
     expect(createAction?.confidence.label).toBe("high");
   });
 });

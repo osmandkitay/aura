@@ -1,10 +1,24 @@
+import { createHash } from "node:crypto";
 import { canonicalizeJsonValue } from "../canonical";
 import { AuraAction, AuraConfidence, AuraDocument, AuraIntent, HttpMethod } from "../schema/types";
 import { humanizeIntent } from "../normalize";
 
 export type AuraActionCandidate = Omit<AuraAction, "id">;
 
-type SortableAction = Pick<AuraAction, "key" | "title" | "aliases" | "entrypoint" | "origin" | "confidence">;
+const MIN_LOCATOR_HASH_LENGTH = 12;
+const SHA256_HEX_LENGTH = 64;
+
+type IdentitySeedAction = Pick<AuraAction, "entrypoint" | "origin">;
+type SortableAction = Pick<AuraAction, "key" | "entrypoint" | "origin">;
+
+export interface AuraActionSourceIdentity {
+  source: AuraAction["origin"]["source"];
+  method: AuraAction["entrypoint"]["method"];
+  path: AuraAction["entrypoint"]["path"];
+  ref: string;
+  operation: string;
+  resource: string;
+}
 
 function compareText(left: string, right: string): number {
   if (left < right) {
@@ -30,23 +44,74 @@ function normalizedAliases(aliases: string[] | undefined): string[] | undefined 
   return aliases ? uniqueStrings(aliases) : undefined;
 }
 
+function canonicalJsonSeed(value: unknown): string {
+  return JSON.stringify(canonicalizeJsonValue(value));
+}
+
+function locatorHash(seed: string): string {
+  return createHash("sha256").update(seed).digest("hex");
+}
+
+function collisionAdjustedAction(candidate: AuraActionCandidate, id: string): AuraAction {
+  return {
+    ...candidate,
+    id,
+    aliases: normalizedAliases(candidate.aliases),
+    confidence: collisionAdjustedConfidence(candidate.confidence)
+  };
+}
+
+function resolveLocatorSuffixes(key: string, group: AuraActionCandidate[]): string[] {
+  const fullHashes = group.map((candidate) => locatorHash(canonicalSourceIdentitySeed(candidate)));
+
+  for (let prefixLength = MIN_LOCATOR_HASH_LENGTH; prefixLength <= SHA256_HEX_LENGTH; prefixLength += 1) {
+    const prefixes = fullHashes.map((hash) => hash.slice(0, prefixLength));
+    if (new Set(prefixes).size === prefixes.length) {
+      return prefixes;
+    }
+  }
+
+  throw new Error(`Unable to derive a unique stable locator hash for semantic key "${key}" from the available source identity facts.`);
+}
+
+function finalizeCollisionGroup(group: AuraActionCandidate[]): AuraAction[] {
+  if (group.length === 0) {
+    return [];
+  }
+
+  if (group.length === 1) {
+    const [candidate] = group;
+    return [
+      {
+        ...candidate,
+        id: candidate.key,
+        aliases: normalizedAliases(candidate.aliases),
+        confidence: candidate.confidence
+      }
+    ];
+  }
+
+  const suffixes = resolveLocatorSuffixes(group[0].key, group);
+  return group.map((candidate, index) => collisionAdjustedAction(candidate, `${candidate.key}__${suffixes[index]}`));
+}
+
+export function actionSourceIdentity(action: IdentitySeedAction): AuraActionSourceIdentity {
+  return {
+    source: action.origin.source,
+    method: action.entrypoint.method,
+    path: action.entrypoint.path,
+    ref: action.origin.ref ?? "",
+    operation: action.origin.operationId ?? action.origin.capability ?? "",
+    resource: action.origin.resource ?? ""
+  };
+}
+
+export function canonicalSourceIdentitySeed(action: IdentitySeedAction): string {
+  return canonicalJsonSeed(actionSourceIdentity(action));
+}
+
 export function canonicalActionSortKey(action: SortableAction): string {
-  return JSON.stringify(
-    canonicalizeJsonValue({
-      key: action.key,
-      source: action.origin.source,
-      file: action.origin.file ?? "",
-      method: action.entrypoint.method,
-      path: action.entrypoint.path,
-      ref: action.origin.ref ?? "",
-      operation: action.origin.operationId ?? action.origin.capability ?? "",
-      resource: action.origin.resource ?? "",
-      title: action.title,
-      summary: action.origin.summary ?? "",
-      aliases: normalizedAliases(action.aliases),
-      confidence: action.confidence
-    })
-  );
+  return canonicalJsonSeed([action.key, actionSourceIdentity(action)]);
 }
 
 export function sortActionCandidates<T extends AuraActionCandidate>(candidates: T[]): T[] {
@@ -54,34 +119,46 @@ export function sortActionCandidates<T extends AuraActionCandidate>(candidates: 
 }
 
 export function assignStableIds(candidates: AuraActionCandidate[]): AuraAction[] {
-  const keyCounts = new Map<string, number>();
+  const orderedCandidates = sortActionCandidates(candidates);
+  const finalized: AuraAction[] = [];
+  let currentGroup: AuraActionCandidate[] = [];
 
-  return candidates.map((candidate) => {
-    const nextCount = (keyCounts.get(candidate.key) ?? 0) + 1;
-    keyCounts.set(candidate.key, nextCount);
+  const flushGroup = (): void => {
+    finalized.push(...finalizeCollisionGroup(currentGroup));
+    currentGroup = [];
+  };
 
-    return {
-      ...candidate,
-      id: nextCount === 1 ? candidate.key : `${candidate.key}__${nextCount}`,
-      aliases: normalizedAliases(candidate.aliases),
-      confidence: nextCount === 1 ? candidate.confidence : collisionAdjustedConfidence(candidate.confidence)
-    };
-  });
+  for (const candidate of orderedCandidates) {
+    if (currentGroup.length > 0 && currentGroup[0].key !== candidate.key) {
+      flushGroup();
+    }
+
+    currentGroup.push(candidate);
+  }
+
+  flushGroup();
+  return finalized;
 }
 
 export function finalizeActionCandidates(candidates: AuraActionCandidate[]): AuraAction[] {
-  return assignStableIds(sortActionCandidates(candidates));
+  return assignStableIds(candidates);
 }
 
 export function canonicalizeDocument(document: AuraDocument): AuraDocument {
   return {
     ...document,
-    actions: sortActionCandidates(
-      document.actions.map((action) => ({
+    source: {
+      kind: document.source.kind
+    },
+    actions: document.actions.map((action) => {
+      const { file: _ignoredOriginFile, ...origin } = action.origin as AuraAction["origin"] & { file?: string };
+
+      return {
         ...action,
-        aliases: normalizedAliases(action.aliases)
-      }))
-    )
+        aliases: normalizedAliases(action.aliases),
+        origin
+      };
+    })
   };
 }
 

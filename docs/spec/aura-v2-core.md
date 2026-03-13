@@ -2,8 +2,12 @@
 
 AURA 2.0 is centered on `actions[]`.
 Each action has a stable semantic key, a normalized intent, an entrypoint, provenance, and confidence.
-When two source actions normalize to the same meaning, AURA keeps the shared semantic `key` and assigns a collision-safe `id` such as `post.create__2`.
+When two source actions normalize to the same meaning, AURA keeps the shared semantic `key` and assigns every member a collision-safe `id` such as `post.create__7a4d3c91b2ef`.
+That suffix is the first 12 or more lowercase hex characters of a SHA-256 hash over the canonical source identity seed: `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, `origin.operationId` or `origin.capability`, and `origin.resource`.
+Mutable representation fields such as `title`, `docs`, `aliases`, `confidence`, and `origin.summary` do not affect locator identity.
 Action order and published locators are derived from stable source facts, not from raw source traversal order.
+The default canonical artifact is repo-path-free: it keeps portable provenance but omits local file traces such as `source.file` and `origin.file`.
+Final action order is settled during finalization; canonicalization only cleans representation.
 
 ## Schema URL strategy
 
@@ -22,6 +26,9 @@ That keeps derived and published artifacts stable even as `main` moves and match
   "actions": []
 }
 ```
+
+In canonical output, `source` records only the input kind.
+Repo-local checkout paths are not part of the default artifact.
 
 ## Required action fields
 
@@ -49,5 +56,6 @@ That keeps derived and published artifacts stable even as `main` moves and match
 `publish` writes a small index to `/.well-known/aura.json` and one detail file per action under `/.well-known/aura/actions/`.
 The index is intentionally smaller than the derived document.
 Its `href` values point to action detail files by `id`, not by `key`, so semantic key collisions do not corrupt the published surface.
+`id` is a durable locator derived from source identity facts, not a full representation hash.
 Derived and published JSON is written in a stable, human-readable form with recursively sorted object keys and safe unordered arrays such as `aliases` and JSON Schema `required` entries canonicalized for clean diffs.
 This is intentionally a well-known discovery artifact, not a hosted registry protocol.
