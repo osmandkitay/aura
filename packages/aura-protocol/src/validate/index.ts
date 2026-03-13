@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Ajv, { ErrorObject, ValidateFunction } from "ajv";
+import { finalizedActionOrderError } from "../derive/shared";
 import { PublishedAuraAction, AuraDocument, PublishedAuraIndex } from "../schema/types";
 
 type ValidationTarget = "document" | "publish" | "action";
@@ -103,7 +104,22 @@ function validateWithSchema<T>(value: unknown, target: ValidationTarget): Valida
 }
 
 export function validateAuraDocument(value: unknown): ValidationResult<AuraDocument> {
-  return validateWithSchema<AuraDocument>(value, "document");
+  const result = validateWithSchema<AuraDocument>(value, "document");
+  if (!result.valid || !result.value) {
+    return result;
+  }
+
+  const orderError = finalizedActionOrderError(result.value);
+  if (!orderError) {
+    return result;
+  }
+
+  return {
+    ...result,
+    valid: false,
+    errors: [...result.errors, orderError],
+    value: undefined
+  };
 }
 
 export function validatePublishedIndex(value: unknown): ValidationResult<PublishedAuraIndex> {
@@ -116,7 +132,16 @@ export function validatePublishedAction(value: unknown): ValidationResult<Publis
 
 export function validateAny(value: unknown): ValidationResult<AuraDocument | PublishedAuraIndex | PublishedAuraAction> {
   const target = detectValidationTarget(value);
-  return validateWithSchema(value, target);
+
+  if (target === "document") {
+    return validateAuraDocument(value);
+  }
+
+  if (target === "publish") {
+    return validatePublishedIndex(value);
+  }
+
+  return validatePublishedAction(value);
 }
 
 export function validateFile(filePath: string): ValidationResult<AuraDocument | PublishedAuraIndex | PublishedAuraAction> {

@@ -77,7 +77,7 @@ export function publishDocument(document: AuraDocument, outDirectory: string): P
   const canonicalDocument = canonicalizeDocument(document);
   const validatedDocument = validateAuraDocument(canonicalDocument);
   if (!validatedDocument.valid) {
-    throw new Error(`Derived document failed validation:\n${validatedDocument.errors.join("\n")}`);
+    throw new Error(`AURA 2.0 document failed validation:\n${validatedDocument.errors.join("\n")}`);
   }
 
   const outputRoot = path.resolve(outDirectory);

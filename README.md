@@ -30,6 +30,8 @@ node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-
 
 `derive` writes a sibling `.derived/aura-v2.json` by default.
 `publish` writes `dist/.well-known/aura.json` plus one detail file per action under `dist/.well-known/aura/actions/`.
+Source inputs are finalized by the core during derive.
+Existing AURA 2.0 input is accepted only if its `actions[]` order already matches the core's canonical finalized order; `publish` preserves that order and does not rescue malformed documents.
 Generated `.derived/` and `dist/` output is local and ignored.
 
 When a 2.0 package release exists, pin the exact version instead of relying on an unpinned `latest` tag:
@@ -44,7 +46,7 @@ Those exact-version commands are the intended package story, but they are not va
 ## Supported Inputs Today
 
 - local OpenAPI JSON
-- existing local AURA 2.0 JSON
+- existing local AURA 2.0 JSON that already uses canonical finalized action order
 - local AURA v1 JSON as a legacy migration input
 
 ## What This Repo Does
@@ -55,6 +57,7 @@ Those exact-version commands are the intended package story, but they are not va
 - preserves portable provenance in `aliases` and `origin`
 - omits local repo file paths such as `source.file` and `origin.file` from default derived and published artifacts
 - validates derived and published artifacts with JSON Schema
+- enforces canonical finalized action order for existing AURA 2.0 input instead of silently repairing it
 - publishes a small well-known index and per-action detail files
 - writes deterministic, human-readable JSON artifacts for clean diffs
 

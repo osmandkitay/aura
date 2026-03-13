@@ -8,6 +8,8 @@ Mutable representation fields such as `title`, `docs`, `aliases`, `confidence`, 
 Action order and published locators are derived from stable source facts, not from raw source traversal order.
 The default canonical artifact is repo-path-free: it keeps portable provenance but omits local file traces such as `source.file` and `origin.file`.
 Final action order is settled during finalization; canonicalization only cleans representation.
+Existing AURA 2.0 input is treated as already-finalized truth only when its `actions[]` order already matches that canonical finalized order.
+Validation and publish preserve finalized order and fail malformed existing documents instead of silently re-sorting them.
 
 ## Schema URL strategy
 

@@ -10,6 +10,7 @@ That publish surface is the web-native boundary of this core.
 Its action `id` values are durable locators derived from stable source identity facts, not from mutable presentation fields or full document fingerprints.
 Its default bytes are repo-path-free: portable provenance stays, local checkout trace does not.
 Final action order belongs to the finalization path; canonicalization only performs representation cleanup.
+Existing AURA 2.0 documents are accepted as input only when they already preserve that finalized canonical order, and publish does not rescue malformed order.
 It is designed to be hostable as static files today and consumable by future action catalogs, service descriptors, or read-surface tooling later.
 Those later systems are deliberately outside this repo.
 

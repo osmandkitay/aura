@@ -60,5 +60,6 @@ If two source actions normalize to the same semantic meaning, AURA does not muta
 - duplicate groups are ordered deterministically from the same source identity facts used to derive the hash suffix
 - the locator seed includes only `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, `origin.operationId` or `origin.capability`, and `origin.resource`
 - mutable derived fields such as `title`, `docs`, `aliases`, `confidence`, and `origin.summary` do not affect locator identity
+- existing AURA 2.0 input is accepted as already-finalized truth only when it preserves that canonical duplicate-group order
 
 This keeps public semantics clean while giving agents a durable web locator that does not renumber when a new colliding sibling appears.

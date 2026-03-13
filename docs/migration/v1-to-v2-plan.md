@@ -11,6 +11,7 @@ It is the running checklist, black-box log, and final review record for this ref
 - Collision ids publish as `key__<hash>` locators derived from stable source identity facts, not numeric suffixes or full representation hashes.
 - Default canonical artifacts are repo-path-free: `source.file` and `origin.file` are not published.
 - Final action order is settled in finalization, not silently repaired later by canonical cleanup.
+- Existing AURA 2.0 input is accepted only when its action order already matches canonical finalized order.
 
 ## Progress
 
@@ -221,13 +222,14 @@ It is the running checklist, black-box log, and final review record for this ref
 - Supported inputs in this task:
   - local AURA v1 JSON
   - local OpenAPI JSON
-  - existing AURA 2.0 JSON
+  - existing AURA 2.0 JSON that already preserves canonical finalized action order
 - Output layout:
   - derive defaults to a sibling `.derived/aura-v2.json`
   - publish writes `/.well-known/aura.json`
   - publish writes `/.well-known/aura/actions/<id>.json`
 - Validation path:
   - derived documents validate against `aura-v2.schema.json`
+  - AURA 2.0 document validation also enforces canonical finalized action order for existing input
   - per-action detail files validate against `aura-action.schema.json`
   - published indexes validate against `aura-publish.schema.json`
 - Known unsupported cases:

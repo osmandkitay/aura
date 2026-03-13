@@ -37,11 +37,13 @@ node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-
 ```
 
 Generated `.derived/` and `dist/` output is local and ignored.
+Source inputs are finalized by the core during derive.
+Existing AURA 2.0 input is accepted only if its `actions[]` order already matches canonical finalized order; `publish` preserves that order and does not repair malformed documents.
 
 ## Supported Inputs
 
 - local OpenAPI JSON
-- existing local AURA 2.0 JSON
+- existing local AURA 2.0 JSON that already uses canonical finalized action order
 - local AURA v1 JSON as a legacy migration input
 
 ## Package Assets
@@ -55,5 +57,6 @@ Generated `.derived/` and `dist/` output is local and ignored.
 This package does not crawl, automate browsers, or host remote services.
 It only derives, validates, and publishes the machine-actionable surface described by local input files.
 Collision groups publish through `key__<hash>` locators derived from stable source identity facts rather than numeric renumbering or full representation hashes.
+Existing AURA 2.0 documents are treated as already-finalized truth only when their action order already matches the core's canonical stable ordering rules.
 Default derived and published artifacts are repo-path-free: they keep portable provenance, but omit local file traces such as `source.file` and `origin.file`.
 Future crawl, bridge, index, or signing systems should consume these artifacts from separate repos.

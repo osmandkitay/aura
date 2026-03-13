@@ -144,6 +144,36 @@ export function finalizeActionCandidates(candidates: AuraActionCandidate[]): Aur
   return assignStableIds(candidates);
 }
 
+function toActionCandidate(action: AuraAction): AuraActionCandidate {
+  const { id: _ignoredId, ...candidate } = action;
+  return candidate;
+}
+
+function describeAction(action: Pick<AuraAction, "key" | "entrypoint">): string {
+  return `"${action.key}" (${action.entrypoint.method} ${action.entrypoint.path})`;
+}
+
+export function finalizedActionOrderError(document: AuraDocument): string | undefined {
+  try {
+    const expectedOrder = assignStableIds(document.actions.map(toActionCandidate));
+    const mismatchIndex = document.actions.findIndex((action, index) => {
+      const expected = expectedOrder[index];
+      return canonicalActionSortKey(action) !== canonicalActionSortKey(expected);
+    });
+
+    if (mismatchIndex === -1) {
+      return undefined;
+    }
+
+    const expected = expectedOrder[mismatchIndex];
+    const actual = document.actions[mismatchIndex];
+    return `/actions: action order is not finalized; expected ${describeAction(expected)} at index ${mismatchIndex} but found ${describeAction(actual)}. Existing AURA 2.0 input must already match canonical finalized order.`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `/actions: ${message}`;
+  }
+}
+
 export function canonicalizeDocument(document: AuraDocument): AuraDocument {
   return {
     ...document,

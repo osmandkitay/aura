@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { deriveDocument, deriveFile, publishDocument, publishFile } from "../../packages/aura-protocol/src";
+import { deriveDocument, deriveFile, publishDocument, publishFile, validateAuraDocument } from "../../packages/aura-protocol/src";
 import { finalizeActionCandidates } from "../../packages/aura-protocol/src/derive/shared";
 import { ROOT, createScenarioTempDir, readJson, removeDirectory, snapshotDirectory } from "./helpers";
 
@@ -151,7 +151,38 @@ describe("Scenario K - locator identity regressions", () => {
     }
   });
 
-  it("preserves the finalized action order already present on a document during publish", () => {
+  it("rejects malformed existing AURA 2.0 action order during validation", () => {
+    const fixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "collision-openapi.json");
+    const fixture = readJson<unknown>(fixturePath);
+    const document = deriveDocument(fixture);
+    const reversed = {
+      ...document,
+      actions: [...document.actions].reverse()
+    };
+
+    const validation = validateAuraDocument(reversed);
+
+    expect(validation.valid).toBe(false);
+    expect(validation.errors).toEqual([
+      '/actions: action order is not finalized; expected "post.create" (POST /articles) at index 0 but found "post.create" (POST /posts). Existing AURA 2.0 input must already match canonical finalized order.'
+    ]);
+  });
+
+  it("rejects malformed existing AURA 2.0 action order during derive", () => {
+    const fixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "collision-openapi.json");
+    const fixture = readJson<unknown>(fixturePath);
+    const document = deriveDocument(fixture);
+    const reversed = {
+      ...document,
+      actions: [...document.actions].reverse()
+    };
+
+    expect(() => deriveDocument(reversed)).toThrowError(
+      'Input is not a valid AURA 2.0 document:\n/actions: action order is not finalized; expected "post.create" (POST /articles) at index 0 but found "post.create" (POST /posts). Existing AURA 2.0 input must already match canonical finalized order.'
+    );
+  });
+
+  it("rejects malformed existing AURA 2.0 action order during publish", () => {
     const fixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "collision-openapi.json");
     const fixture = readJson<unknown>(fixturePath);
     const document = deriveDocument(fixture);
@@ -162,10 +193,9 @@ describe("Scenario K - locator identity regressions", () => {
     const scenarioRoot = createScenarioTempDir("aura-scenario-k-order-");
 
     try {
-      const published = publishDocument(reversed, path.join(scenarioRoot, "dist"));
-
-      expect(published.derived.actions.map((action) => action.id)).toEqual(reversed.actions.map((action) => action.id));
-      expect(published.index.actions.map((action) => action.id)).toEqual(reversed.actions.map((action) => action.id));
+      expect(() => publishDocument(reversed, path.join(scenarioRoot, "dist"))).toThrowError(
+        'AURA 2.0 document failed validation:\n/actions: action order is not finalized; expected "post.create" (POST /articles) at index 0 but found "post.create" (POST /posts). Existing AURA 2.0 input must already match canonical finalized order.'
+      );
     } finally {
       removeDirectory(scenarioRoot);
     }
