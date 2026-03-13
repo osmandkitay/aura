@@ -41,10 +41,9 @@ export function snapshotDirectory(directoryPath: string): Record<string, string>
 export function locatorIdentitySeed(action: Pick<AuraAction, "entrypoint" | "origin">): string {
   return JSON.stringify({
     method: action.entrypoint.method,
-    operation: action.origin.operationId ?? action.origin.capability ?? "",
+    operation: action.origin.operationId ?? "",
     path: action.entrypoint.path,
     ref: action.origin.ref ?? "",
-    resource: action.origin.resource ?? "",
     source: action.origin.source
   });
 }

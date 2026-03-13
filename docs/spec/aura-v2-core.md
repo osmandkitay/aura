@@ -3,13 +3,13 @@
 AURA 2.0 is centered on `actions[]`.
 Each action has a stable semantic key, a normalized intent, an entrypoint, provenance, and confidence.
 When two source actions normalize to the same meaning, AURA keeps the shared semantic `key` and assigns every member a collision-safe `id` such as `post.create__7a4d3c91b2ef`.
-That suffix is the first 12 or more lowercase hex characters of a SHA-256 hash over the canonical source identity seed: `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, `origin.operationId` or `origin.capability`, and `origin.resource`.
+That suffix is the first 12 or more lowercase hex characters of a SHA-256 hash over the canonical source identity seed: `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, and `origin.operationId`.
 Mutable representation fields such as `title`, `docs`, `aliases`, `confidence`, and `origin.summary` do not affect locator identity.
 Action order and published locators are derived from stable source facts, not from raw source traversal order.
 The default canonical artifact is repo-path-free: it keeps portable provenance but omits local file traces such as `source.file` and `origin.file`.
 Final action order is settled during finalization; canonicalization only cleans representation.
-Existing AURA 2.0 input is treated as already-finalized truth only when its `actions[]` order already matches that canonical finalized order.
-Validation and publish preserve finalized order and fail malformed existing documents instead of silently re-sorting them.
+Existing AURA 2.0 input is treated as already-finalized truth only when its `actions[]` order and `id` values already match that canonical finalized result.
+Validation and publish preserve finalized order and finalized ids and fail malformed existing documents instead of silently re-sorting or reassigning them.
 
 ## Schema URL strategy
 

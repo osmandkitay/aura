@@ -50,14 +50,12 @@ describe("Scenario A - repo shape truth test", () => {
     expect(rootPackage.scripts?.build).toBe("pnpm --filter aura-protocol build");
     expect(protocolPackage.publishConfig).toMatchObject({ access: "public", tag: "alpha" });
     expect(trackedFiles(".github")).toEqual([".github/workflows/ci.yml"]);
-    expect(trackedFiles("examples")).toEqual([
-      "examples/minimal-site/source/openapi.json",
-      "examples/upgrade-from-v1/source/aura-v1.json"
-    ]);
+    expect(trackedFiles("examples")).toEqual(["examples/minimal-site/source/openapi.json"]);
 
     const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
     expect(readme).not.toContain("aura-reference-server");
     expect(readme).not.toContain("aura-reference-client");
+    expect(readme).not.toContain("local AURA v1 JSON");
     expect(readme).not.toContain("npx aura-protocol derive");
     expect(readme).toContain("Consumers do not need this repo or package.");
     expect(readme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
@@ -71,6 +69,7 @@ describe("Scenario A - repo shape truth test", () => {
 
     const packageReadme = fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "README.md"), "utf8");
     expect(packageReadme).toContain("Consume AURA Without The Package");
+    expect(packageReadme).not.toContain("local AURA v1 JSON");
     expect(packageReadme).toContain("plain `npx aura-protocol` does not yet run this 2.0 code");
     expect(packageReadme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
 

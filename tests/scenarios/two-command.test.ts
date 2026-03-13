@@ -12,11 +12,11 @@ describe("Scenario C - two-command happy path", () => {
     try {
       fs.mkdirSync(path.join(scenarioRoot, "source"), { recursive: true });
       fs.copyFileSync(
-        path.join(ROOT, "examples", "upgrade-from-v1", "source", "aura-v1.json"),
-        path.join(scenarioRoot, "source", "aura-v1.json")
+        path.join(ROOT, "examples", "minimal-site", "source", "openapi.json"),
+        path.join(scenarioRoot, "source", "openapi.json")
       );
 
-      execFileSync("node", [CLI_PATH, "derive", path.join(scenarioRoot, "source", "aura-v1.json")], {
+      execFileSync("node", [CLI_PATH, "derive", path.join(scenarioRoot, "source", "openapi.json")], {
         cwd: ROOT,
         stdio: "pipe"
       });

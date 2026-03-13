@@ -2,7 +2,6 @@ import path from "node:path";
 import { AuraDocument } from "../schema/types";
 import { readJsonFile, writeJsonFile, defaultDeriveOutputPath } from "../filesystem";
 import { validateAuraDocument } from "../validate";
-import { deriveFromAuraV1 } from "./from-aura-v1";
 import { deriveFromOpenApi } from "./from-openapi";
 import { detectInputKind } from "./detect";
 import { canonicalizeDocument } from "./shared";
@@ -23,10 +22,6 @@ export function deriveDocument(value: unknown): AuraDocument {
     }
 
     return document;
-  }
-
-  if (kind === "aura-v1") {
-    return canonicalizeDocument(deriveFromAuraV1(value));
   }
 
   return canonicalizeDocument(deriveFromOpenApi(value));

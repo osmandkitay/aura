@@ -15,9 +15,5 @@ export function detectInputKind(value: unknown): AuraInputKind {
     return "openapi";
   }
 
-  if (candidate.protocol === "AURA" && typeof candidate.version === "string" && candidate.capabilities && candidate.resources) {
-    return "aura-v1";
-  }
-
-  throw new Error("Unsupported input. Expected an AURA v1 manifest, an OpenAPI document, or an AURA 2.0 document.");
+  throw new Error("Unsupported input. Expected a local OpenAPI document or an AURA 2.0 document.");
 }

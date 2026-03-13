@@ -2,6 +2,7 @@
 
 Agent-Usable Resource Assertion.
 This repo is the small AURA 2.0 core for deriving, validating, and publishing the machine-actionable surface of a site from local machine-readable inputs.
+AURA 2.0 is the mainline.
 It keeps semantic action keys clean and publishes durable action locators for the open web.
 It is a small open compiler, not a hosted product or framework.
 
@@ -31,7 +32,7 @@ node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-
 `derive` writes a sibling `.derived/aura-v2.json` by default.
 `publish` writes `dist/.well-known/aura.json` plus one detail file per action under `dist/.well-known/aura/actions/`.
 Source inputs are finalized by the core during derive.
-Existing AURA 2.0 input is accepted only if its `actions[]` order already matches the core's canonical finalized order; `publish` preserves that order and does not rescue malformed documents.
+Existing AURA 2.0 input is accepted only if its `actions[]` order and `id` values already match the core's canonical finalized result; `publish` preserves that truth and does not rescue malformed documents.
 Generated `.derived/` and `dist/` output is local and ignored.
 
 When a 2.0 package release exists, pin the exact version instead of relying on an unpinned `latest` tag:
@@ -46,8 +47,7 @@ Those exact-version commands are the intended package story, but they are not va
 ## Supported Inputs Today
 
 - local OpenAPI JSON
-- existing local AURA 2.0 JSON that already uses canonical finalized action order
-- local AURA v1 JSON as a legacy migration input
+- existing local AURA 2.0 JSON that already uses canonical finalized action order and canonical finalized IDs
 
 ## What This Repo Does
 
@@ -57,7 +57,7 @@ Those exact-version commands are the intended package story, but they are not va
 - preserves portable provenance in `aliases` and `origin`
 - omits local repo file paths such as `source.file` and `origin.file` from default derived and published artifacts
 - validates derived and published artifacts with JSON Schema
-- enforces canonical finalized action order for existing AURA 2.0 input instead of silently repairing it
+- enforces canonical finalized action order and canonical finalized IDs for existing AURA 2.0 input instead of silently repairing them
 - publishes a small well-known index and per-action detail files
 - writes deterministic, human-readable JSON artifacts for clean diffs
 
@@ -69,13 +69,10 @@ Those exact-version commands are the intended package story, but they are not va
 - it does not ship a demo server or demo client
 - it does not add remote runtimes or placeholder extension systems
 
-## For v1 Users
+## Historical Note
 
-AURA v1 remains a legacy migration input path; AURA 2.0 is the mainline.
-This repo does not treat `resources`, `capabilities`, or `AURA-State` as the authored center anymore.
-V1 manifests are converted into `actions[]`, and raw v1 names are retained only as provenance.
-
-The migration log for the original core rewrite is in `docs/migration/v1-to-v2-plan.md`.
+Earlier manifest formats are part of AURA history, not part of the active 2.0 core contract.
+The original rewrite log is kept in `docs/migration/v1-to-v2-plan.md`.
 
 ## Docs
 

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Ajv, { ErrorObject, ValidateFunction } from "ajv";
-import { finalizedActionOrderError } from "../derive/shared";
+import { finalizedActionIntegrityError } from "../derive/shared";
 import { PublishedAuraAction, AuraDocument, PublishedAuraIndex } from "../schema/types";
 
 type ValidationTarget = "document" | "publish" | "action";
@@ -109,15 +109,15 @@ export function validateAuraDocument(value: unknown): ValidationResult<AuraDocum
     return result;
   }
 
-  const orderError = finalizedActionOrderError(result.value);
-  if (!orderError) {
+  const integrityError = finalizedActionIntegrityError(result.value);
+  if (!integrityError) {
     return result;
   }
 
   return {
     ...result,
     valid: false,
-    errors: [...result.errors, orderError],
+    errors: [...result.errors, integrityError],
     value: undefined
   };
 }

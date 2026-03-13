@@ -44,7 +44,7 @@ It derives a stable action key in `object.verb` form and keeps raw names only as
 Raw names remain machine-readable in two places:
 
 - `aliases[]`
-- `origin.operationId` or `origin.capability`
+- `origin.operationId`
 
 That keeps the published key stable without throwing away the source signal.
 Default canonical artifacts keep that portable provenance while omitting local file-path trace.
@@ -58,8 +58,8 @@ If two source actions normalize to the same semantic meaning, AURA does not muta
 - `id` carries uniqueness as a durable locator, for example `post.create__7a4d3c91b2ef`
 - published `href` locators use `id`, not `key`
 - duplicate groups are ordered deterministically from the same source identity facts used to derive the hash suffix
-- the locator seed includes only `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, `origin.operationId` or `origin.capability`, and `origin.resource`
+- the locator seed includes only `origin.source`, `entrypoint.method`, `entrypoint.path`, `origin.ref`, and `origin.operationId`
 - mutable derived fields such as `title`, `docs`, `aliases`, `confidence`, and `origin.summary` do not affect locator identity
-- existing AURA 2.0 input is accepted as already-finalized truth only when it preserves that canonical duplicate-group order
+- existing AURA 2.0 input is accepted as already-finalized truth only when it preserves that canonical duplicate-group order and the canonical finalized ids for that order
 
 This keeps public semantics clean while giving agents a durable web locator that does not renumber when a new colliding sibling appears.

@@ -17,7 +17,6 @@ export interface AuraActionSourceIdentity {
   path: AuraAction["entrypoint"]["path"];
   ref: string;
   operation: string;
-  resource: string;
 }
 
 function compareText(left: string, right: string): number {
@@ -101,8 +100,7 @@ export function actionSourceIdentity(action: IdentitySeedAction): AuraActionSour
     method: action.entrypoint.method,
     path: action.entrypoint.path,
     ref: action.origin.ref ?? "",
-    operation: action.origin.operationId ?? action.origin.capability ?? "",
-    resource: action.origin.resource ?? ""
+    operation: action.origin.operationId ?? ""
   };
 }
 
@@ -149,25 +147,36 @@ function toActionCandidate(action: AuraAction): AuraActionCandidate {
   return candidate;
 }
 
+function expectedFinalizedActions(document: AuraDocument): AuraAction[] {
+  return assignStableIds(document.actions.map(toActionCandidate));
+}
+
 function describeAction(action: Pick<AuraAction, "key" | "entrypoint">): string {
   return `"${action.key}" (${action.entrypoint.method} ${action.entrypoint.path})`;
 }
 
-export function finalizedActionOrderError(document: AuraDocument): string | undefined {
+export function finalizedActionIntegrityError(document: AuraDocument): string | undefined {
   try {
-    const expectedOrder = assignStableIds(document.actions.map(toActionCandidate));
+    const expectedOrder = expectedFinalizedActions(document);
     const mismatchIndex = document.actions.findIndex((action, index) => {
       const expected = expectedOrder[index];
       return canonicalActionSortKey(action) !== canonicalActionSortKey(expected);
     });
 
-    if (mismatchIndex === -1) {
+    if (mismatchIndex !== -1) {
+      const expected = expectedOrder[mismatchIndex];
+      const actual = document.actions[mismatchIndex];
+      return `/actions: action order is not finalized; expected ${describeAction(expected)} at index ${mismatchIndex} but found ${describeAction(actual)}. Existing AURA 2.0 input must already match canonical finalized order.`;
+    }
+
+    const idMismatchIndex = document.actions.findIndex((action, index) => action.id !== expectedOrder[index]?.id);
+    if (idMismatchIndex === -1) {
       return undefined;
     }
 
-    const expected = expectedOrder[mismatchIndex];
-    const actual = document.actions[mismatchIndex];
-    return `/actions: action order is not finalized; expected ${describeAction(expected)} at index ${mismatchIndex} but found ${describeAction(actual)}. Existing AURA 2.0 input must already match canonical finalized order.`;
+    const expected = expectedOrder[idMismatchIndex];
+    const actual = document.actions[idMismatchIndex];
+    return `/actions/${idMismatchIndex}/id: action id is not finalized; expected "${expected.id}" for ${describeAction(expected)} but found "${actual.id}". Existing AURA 2.0 input must already match canonical finalized ids.`;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return `/actions: ${message}`;

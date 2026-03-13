@@ -1,7 +1,7 @@
 export type JsonSchema = boolean | Record<string, unknown>;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-export type AuraInputKind = "aura-v1" | "openapi" | "aura-v2";
+export type AuraInputKind = "openapi" | "aura-v2";
 export type AuraAuthKind = "none" | "cookie" | "bearer" | "api-key" | "oauth2" | "unknown";
 export type AuraRisk = "low" | "medium" | "high";
 export type AuraConfirm = "never" | "suggested" | "required";
@@ -40,8 +40,6 @@ export interface AuraDocs {
 export interface AuraOrigin {
   source: AuraInputKind;
   path?: string;
-  resource?: string;
-  capability?: string;
   operationId?: string;
   method?: HttpMethod;
   ref?: string;

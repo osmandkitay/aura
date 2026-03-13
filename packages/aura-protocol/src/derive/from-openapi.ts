@@ -15,6 +15,10 @@ function cloneSchema<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isRecord(value: unknown): value is Record<string, any> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function extractJsonSchema(content: Record<string, any> | undefined): JsonSchema | undefined {
   if (!content || typeof content !== "object") {
     return undefined;
@@ -30,53 +34,77 @@ function extractJsonSchema(content: Record<string, any> | undefined): JsonSchema
 }
 
 function collectParameters(pathItem: Record<string, any>, operation: Record<string, any>): Array<Record<string, any>> {
-  const combined = [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])];
-  const seen = new Set<string>();
-  const result: Array<Record<string, any>> = [];
+  const merged = new Map<string, Record<string, any>>();
 
-  for (const parameter of combined) {
-    if (!parameter || typeof parameter !== "object") {
-      continue;
+  for (const source of [pathItem.parameters ?? [], operation.parameters ?? []]) {
+    for (const parameter of source) {
+      if (!parameter || typeof parameter !== "object") {
+        continue;
+      }
+
+      if (typeof parameter.in !== "string" || typeof parameter.name !== "string") {
+        continue;
+      }
+
+      const key = `${parameter.in}:${parameter.name}`;
+      merged.set(key, parameter);
     }
-
-    const key = `${parameter.in}:${parameter.name}`;
-    if (seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-    result.push(parameter);
   }
 
-  return result;
+  return Array.from(merged.values());
 }
 
 function buildInputSchema(parameters: Array<Record<string, any>>, requestBody: Record<string, any> | undefined): JsonSchema | undefined {
   const bodySchema = extractJsonSchema(requestBody?.content as Record<string, any> | undefined);
-  const properties: Record<string, unknown> = {};
-  const required = new Set<string>();
-
-  if (bodySchema && typeof bodySchema === "object" && bodySchema.type === "object") {
-    const objectSchema = bodySchema as Record<string, any>;
-    Object.assign(properties, cloneSchema((objectSchema.properties ?? {}) as Record<string, unknown>));
-    for (const key of (objectSchema.required as string[] | undefined) ?? []) {
-      required.add(key);
-    }
-  } else if (bodySchema !== undefined) {
-    properties.body = bodySchema;
-    if (requestBody?.required) {
-      required.add("body");
-    }
-  }
+  const parameterProperties: Record<string, unknown> = {};
+  const parameterRequired = new Set<string>();
 
   for (const parameter of parameters) {
     if (!parameter.name || !parameter.schema) {
       continue;
     }
 
-    properties[parameter.name] = cloneSchema(parameter.schema);
+    parameterProperties[parameter.name] = cloneSchema(parameter.schema);
     if (parameter.required) {
-      required.add(parameter.name);
+      parameterRequired.add(parameter.name);
+    }
+  }
+
+  if (bodySchema && isRecord(bodySchema) && bodySchema.type === "object") {
+    if (Object.keys(parameterProperties).length === 0) {
+      return cloneSchema(bodySchema);
+    }
+
+    const objectSchema = cloneSchema(bodySchema);
+    const properties = isRecord(objectSchema.properties) ? cloneSchema(objectSchema.properties) : {};
+    Object.assign(properties, parameterProperties);
+    objectSchema.properties = properties;
+
+    const required = new Set<string>(
+      Array.isArray(objectSchema.required)
+        ? objectSchema.required.filter((value): value is string => typeof value === "string")
+        : []
+    );
+    for (const key of parameterRequired) {
+      required.add(key);
+    }
+
+    if (required.size > 0) {
+      objectSchema.required = Array.from(required);
+    } else {
+      delete objectSchema.required;
+    }
+
+    return objectSchema;
+  }
+
+  const properties: Record<string, unknown> = { ...parameterProperties };
+  const required = new Set(parameterRequired);
+
+  if (bodySchema !== undefined) {
+    properties.body = bodySchema;
+    if (requestBody?.required) {
+      required.add("body");
     }
   }
 

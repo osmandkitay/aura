@@ -1,17 +1,17 @@
 # AURA v1 to v2 Core Refactor Plan
 
-This note freezes the repo's starting point before the AURA 2.0 core rewrite.
-It is the running checklist, black-box log, and final review record for this refactor.
+This note is a historical rewrite log, not the current 2.0 support contract.
+It freezes the repo's starting point before the AURA 2.0 core rewrite and records the transition period when v1 migration still existed in-tree.
 
 ## Current 2.0 truth
 
 - AURA 2.0 is the mainline derive/publish story in this repo.
-- AURA v1 remains only as a legacy migration input.
+- Earlier manifest formats are part of AURA history, not part of the active 2.0 core release line.
 - Semantic `key` and published locator `id` are intentionally separate.
 - Collision ids publish as `key__<hash>` locators derived from stable source identity facts, not numeric suffixes or full representation hashes.
 - Default canonical artifacts are repo-path-free: `source.file` and `origin.file` are not published.
 - Final action order is settled in finalization, not silently repaired later by canonical cleanup.
-- Existing AURA 2.0 input is accepted only when its action order already matches canonical finalized order.
+- Existing AURA 2.0 input is accepted only when its action order and ids already match the canonical finalized result.
 
 ## Progress
 
@@ -220,7 +220,7 @@ It is the running checklist, black-box log, and final review record for this ref
   - `aura-protocol publish <input> --out <dir>`
   - `aura-protocol validate <file>`
 - Supported inputs in this task:
-  - local AURA v1 JSON
+  - local AURA v1 JSON during the rewrite period only
   - local OpenAPI JSON
   - existing AURA 2.0 JSON that already preserves canonical finalized action order
 - Output layout:
@@ -229,7 +229,7 @@ It is the running checklist, black-box log, and final review record for this ref
   - publish writes `/.well-known/aura/actions/<id>.json`
 - Validation path:
   - derived documents validate against `aura-v2.schema.json`
-  - AURA 2.0 document validation also enforces canonical finalized action order for existing input
+  - AURA 2.0 document validation also enforces canonical finalized action order and canonical finalized ids for existing input
   - per-action detail files validate against `aura-action.schema.json`
   - published indexes validate against `aura-publish.schema.json`
 - Known unsupported cases:
@@ -267,7 +267,7 @@ It is the running checklist, black-box log, and final review record for this ref
   - browser automation
   - hosted bridge/index/signing systems
 - Migration message for existing users:
-  - v1 manifests remain valid as legacy migration input, but the authored center is now `actions[]`
+  - during the rewrite period, v1 manifests remained a temporary migration input, but the authored center moved to `actions[]`
 - Future seams documented but not implemented:
   - `docs/rationale/architecture-seams.md`
   - README architecture seams section
@@ -410,9 +410,7 @@ It is the running checklist, black-box log, and final review record for this ref
    - `node packages/aura-protocol/dist/cli/aura-protocol.js derive <local-source>`
    - `node packages/aura-protocol/dist/cli/aura-protocol.js publish <derived-aura-v2.json> --out <dir>`
 4. What input formats are truly supported today?
-   - local OpenAPI JSON
-   - existing local AURA 2.0 JSON
-   - local AURA v1 JSON as a legacy migration input
+   - at the time of this rewrite log: local OpenAPI JSON, existing local AURA 2.0 JSON, and a temporary v1 migration input
 5. What did we deliberately defer?
    - remote URL discovery, crawling, browser automation, hosted bridge/index/sign services, and wide OpenAPI edge-case coverage.
 6. What future repos can plug into this cleanly later?

@@ -128,15 +128,9 @@
       "required": ["source"],
       "properties": {
         "source": {
-          "enum": ["aura-v1", "openapi", "aura-v2"]
+          "enum": ["openapi", "aura-v2"]
         },
         "path": {
-          "type": "string"
-        },
-        "resource": {
-          "type": "string"
-        },
-        "capability": {
           "type": "string"
         },
         "operationId": {
