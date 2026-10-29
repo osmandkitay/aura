@@ -2,8 +2,10 @@ import { AURA_PLAN_SCHEMA_URL, AURA_PROFILE, deriveDocument, type Plan } from '.
 import { toPublishedAction, toPublishedIndex } from '../../packages/aura-protocol/src/surface';
 import { fixture } from './contract-fixture';
 
-export function runnerFixture() {
-  const { source, config } = fixture(), document = deriveDocument(source, config);
+export function runnerFixture(configure?: (source: any, config: ReturnType<typeof fixture>['config']) => void) {
+  const { source, config } = fixture();
+  configure?.(source, config);
+  const document = deriveDocument(source, config);
   const descriptor = 'https://recipes.example/raw/subdirectory/.well-known/aura.json';
   const index = toPublishedIndex(document);
   const details = Object.fromEntries(document.actions.map(action => [action.id, toPublishedAction(document, action)]));

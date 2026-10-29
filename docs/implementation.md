@@ -1,4 +1,59 @@
-# Implementation record
+# Current review and verification
+
+Reviewed `f943371` on `feat/aura-declarative-runner` against the local task
+requirements before product edits. The tracked worktree started clean. Baseline
+install/build and all 75 tests passed. An initial test invocation overlapped
+build cleanup and hit a missing dist CLI; the ordered rerun passed.
+
+Four focused regressions failed on the reviewed implementation: an unsafe JSON
+integer reached the next request as a rounded ID; a model-visible parent could
+include a credential projection; validation decoded URL placeholders that the
+request builder left untouched; and execution discarded State entries for
+other actions. The fixes reject unsupported numbers recursively (also in
+literals, schema data and open-schema values), reject overlapping visibility,
+match literal URL templates consistently and retain all validated State entries
+on each response. No availability cache or automatic recovery was added.
+
+The checker also failed with standalone Node despite npm being on PATH. It now
+discovers npm through its launcher or npm execution context; the same standalone
+Node experiment passes. Both obsolete OpenAPI fixtures had no live references;
+their scenarios use the current explicit-declaration fixture. They were removed.
+The packaged migration document now describes the current contract instead of
+shipping the superseded rewrite checklist; Git retains that history.
+
+The corrected contract is `2.0.0-alpha.3`, with regenerated schemas, matching
+types/examples and a recomputed authored-example revision. Existing alpha.1 and
+alpha.2 tags remain unchanged. No compatibility adapter or npm release was added.
+
+Verification on Windows with Node v22.11.0 and pnpm 10.7.1:
+
+- `pnpm install`: passed; lockfile unchanged. Ignored optional dependency build
+  scripts did not block build or tests.
+- `pnpm build`: passed, including schema drift and compiler-free runner assets.
+- `pnpm test --run`: **83 passed in 17 files**, including the eight new review
+  cases, State failures, real HTTP integration, independent consumers, stable
+  identity, publication rollback, CLI and fair OpenAPI baseline checks.
+- `pnpm check:schemas`: passed for all six generated schemas.
+- `pnpm check:package`: passed. The isolated archive installed outside the repo;
+  all three CLIs, six bundled schema byte comparisons, external Ajv validation,
+  packaged execution and the installed-schema/no-CWD-fallback check passed.
+- Standalone Node with npm available only through PATH: the full package check
+  passed after reproducing its previous discovery failure.
+- README derive/publish/validate and authored-input commands: passed. An existing
+  ignored alpha.2 publication was preserved under `.derived` before publishing
+  into a clean output directory; profile changes do not bypass ownership checks.
+- `git diff --check`: passed.
+
+`node scripts/check-package.mjs --remote` fails with **HTTP 404** for the new
+alpha.3 schema tag. This is an unmet public-release prerequisite, not a passing
+schema check or an environmental blocker. No alpha.3 tag or npm package was
+published. Local verification has no remaining environmental blockers.
+`task.md` is unchanged locally, removed from tracking and ignored; it is excluded
+from the new commit tree. Earlier Git history is unchanged. Fractional numbers retain binary64 rounding,
+credentials still depend on explicit declarations, and the scope limits in the
+spec continue to apply. Historical measurement JSON remains labelled alpha.2.
+
+## Historical alpha.2 implementation record
 
 Branch: `feat/aura-declarative-runner`, based on
 `ba534d1983a2ee3b90c687bef7474393c6c3d589` (`origin/aura-core-v2`).

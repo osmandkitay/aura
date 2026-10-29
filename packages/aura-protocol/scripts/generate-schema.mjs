@@ -20,6 +20,10 @@ const valueType = { oneOf: [{ enum: types }, { type: 'array', minItems: 2, maxIt
 const object = (properties, required = Object.keys(properties)) => ({ type: 'object', additionalProperties: false, required, properties });
 const array = (items, extra = {}) => ({ type: 'array', items, ...extra });
 const ref = name => ({ $ref: `#/$defs/${name}` });
+const number = { type: 'number', minimum: -Number.MAX_SAFE_INTEGER, maximum: Number.MAX_SAFE_INTEGER };
+const count = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
+const json = { anyOf: [{ type: ['string', 'boolean', 'null'] }, number,
+  array(ref('json')), { type: 'object', additionalProperties: ref('json') }] };
 const ids = array(id, { uniqueItems: true });
 const publisher = object({ name: string, url, role: { enum: ['site-owner', 'third-party'] } });
 const source = object({ kind: { enum: ['openapi', 'aura-v2'] }, url, version: string });
@@ -41,13 +45,13 @@ const auth = { oneOf: [object({ kind: { const: 'none' } }), object({ kind: { enu
 const runtime = { anyOf: [ { type: 'boolean' }, object({
   type: valueType, properties: { type: 'object', propertyNames: { not: { const: '__proto__' } }, additionalProperties: ref('runtime') },
   required: array({ type: 'string' }, { uniqueItems: true }), additionalProperties: ref('runtime'),
-  items: ref('runtime'), enum: array({}, { minItems: 1, uniqueItems: true }), const: {},
-  title: { type: 'string' }, description: { type: 'string' }, default: {}, examples: array({}),
-  minimum: { type: 'number' }, maximum: { type: 'number' }, exclusiveMinimum: { type: 'number' },
-  exclusiveMaximum: { type: 'number' }, multipleOf: { type: 'number', exclusiveMinimum: 0 },
-  minLength: { type: 'integer', minimum: 0 }, maxLength: { type: 'integer', minimum: 0 }, pattern: { type: 'string' },
-  minItems: { type: 'integer', minimum: 0 }, maxItems: { type: 'integer', minimum: 0 }, uniqueItems: { type: 'boolean' },
-  minProperties: { type: 'integer', minimum: 0 }, maxProperties: { type: 'integer', minimum: 0 }
+  items: ref('runtime'), enum: array(ref('json'), { minItems: 1, uniqueItems: true }), const: ref('json'),
+  title: { type: 'string' }, description: { type: 'string' }, default: ref('json'), examples: array(ref('json')),
+  minimum: number, maximum: number, exclusiveMinimum: number,
+  exclusiveMaximum: number, multipleOf: { ...number, exclusiveMinimum: 0 },
+  minLength: count, maxLength: count, pattern: { type: 'string' },
+  minItems: count, maxItems: count, uniqueItems: { type: 'boolean' },
+  minProperties: count, maxProperties: count
 }, ['type']) ] };
 const success = { oneOf: [object({ status: { type: 'integer', minimum: 200, maximum: 299 }, contentType: { const: null } }),
   object({ status: { type: 'integer', minimum: 200, maximum: 299, not: { const: 204 } }, contentType: { const: 'application/json' }, schema: ref('runtime') })] };
@@ -61,7 +65,7 @@ const envelope = { profile: { const: profile }, revision, publisher, source, tar
 const protocol = { protocol: { const: 'AURA' }, version: { const: '2.0' } };
 const schemaId = name => ({ const: `${base}/aura-${name}.schema.json` });
 const signature = object({ name: { type: 'string' }, type: valueType, required: { type: 'boolean' } });
-const assignment = object({ target: pointer, value: {}, from: object({ step: id, output: id }) }, ['target']);
+const assignment = object({ target: pointer, value: ref('json'), from: object({ step: id, output: id }) }, ['target']);
 assignment.oneOf = [{ required: ['value'], not: { required: ['from'] } }, { required: ['from'], not: { required: ['value'] } }];
 const schemas = {
   v2: object({ $schema: schemaId('v2'), ...protocol, ...envelope, actions: array(ref('action'), { minItems: 1 }) }),
@@ -78,8 +82,9 @@ const schemas = {
 };
 for (const [name, body] of Object.entries(schemas)) {
   const schema = { $schema: 'http://json-schema.org/draft-07/schema#', $id: `${base}/aura-${name}.schema.json`, ...body };
-  if (name === 'v2') schema.$defs = { runtime, action };
-  if (name === 'action') schema.$defs = { runtime };
+  if (name === 'v2') schema.$defs = { runtime, action, json };
+  if (name === 'action') schema.$defs = { runtime, json };
+  if (name === 'plan') schema.$defs = { json };
   const file = path.join(directory, `aura-${name}.schema.json`);
   const bytes = JSON.stringify(schema, null, 2) + '\n';
   if (process.argv.includes('--check')) {

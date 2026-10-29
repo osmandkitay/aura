@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-config.schema.json",
   "publisher": {
     "name": "Recipe author",
     "url": "https://recipes.example",

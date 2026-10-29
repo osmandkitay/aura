@@ -1,6 +1,6 @@
-# AURA 2.0 alpha.2 contract
+# AURA 2.0 alpha.3 contract
 
-Profile: `2.0.0-alpha.2`. Old release tags are never rewritten. Public schema
+Profile: `2.0.0-alpha.3`. Old release tags are never rewritten. Public schema
 availability is a separate release gate, not implied by a local build.
 
 ## Identity and provenance
@@ -59,6 +59,10 @@ or status/contentType null for no body. 204 never promises a body. outputs have
 name, source body, RFC 6901 pointer, explicit JSON type (possibly nullable union),
 required, visibility model|credential. Null/false/zero/empty differ from missing.
 Credentials may transfer within a run but never enter normal results/logs.
+Outputs with different visibility cannot select the same pointer or overlapping
+ancestor/descendant subtrees, including the root pointer. Reject that conflict
+in config, authored L2 and direct projection; select separate public fields
+explicitly. No runtime redaction or credential-name inference is performed.
 
 ## Mechanical compilation profile
 
@@ -79,6 +83,9 @@ target supplies it. Concatenate base path and operation path without dropping
 /v1. Path scalars encode as segments; query form scalars and repeated scalar
 arrays (explode true); path/header simple scalars. Reject cookie parameters,
 parameter content, complex serialization, non-JSON or multiple media, GET body.
+Path placeholders are literal `{name}` strings in the declared URL. Encoded
+`%7B`/`%7D` braces are literal URL data and never count as placeholders; every
+path binding must match a literal placeholder before execution.
 Auth is anonymous or exactly one bearer/header API key; reject AND/OR alternatives.
 Bearer explicitly maps raw /header/Authorization with prefix "Bearer "; API key
 names its header/input. No static credential values or interactive OAuth support.
@@ -101,6 +108,15 @@ dispatch yields outcome-unknown, retaining prior steps. Projection/type failure
 stops downstream writes. No retry/rollback/automatic resolver invocation.
 401/403/429 report blocked and explicit resolver hints; earlier steps remain.
 
+The numeric profile uses finite IEEE 754 binary64 values, with integers limited
+to -9007199254740991 through 9007199254740991. This applies recursively to
+declarations, schema bounds/literals, plan inputs, responses and projected
+objects/arrays, including values under open or boolean schemas. Unsupported
+numbers fail with `NUMBER_UNSUPPORTED` before being serialized or piped;
+non-finite numbers and JavaScript bigint values are also rejected. Represent
+large IDs as strings in the API and recipe. Fractional values have ordinary
+binary64 rounding; arbitrary-precision decimal arithmetic is outside the profile.
+
 ## Optional L3 AURA-State
 
 Wire is exactly v=2;data=<unpadded-base64url-compact-UTF8-JSON>.
@@ -111,6 +127,13 @@ payload, duplicate or unknown ids and invalid resolver ids yield diagnostics and
 unknown, without changing HTTP success. Each observation belongs only to its
 response/credentials. No persistent delta cache. State never authorizes or
 inserts an action into a plan.
+
+Each completed result and each failure after an HTTP response has
+`state: {actions, diagnostic?}`. `actions` preserves all validated entries from
+that response, including ids outside the current plan. Missing/unusable State
+has an empty list; unusable headers also have a short diagnostic. Query any id
+with `stateFor(state, id)`; an omitted id is unknown. Never merge observations
+across responses or use them to skip authorization or add actions to a plan.
 
 ## Publication and validation
 

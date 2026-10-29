@@ -10,12 +10,16 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = path.join(root, 'packages/aura-protocol');
-const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'aura-package-'));
-const npmCli = [path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
-  path.resolve(path.dirname(process.execPath), '../lib/node_modules/npm/bin/npm-cli.js'),
-  path.resolve(path.dirname(process.execPath), '../share/nodejs/npm/bin/npm-cli.js')].find(file => fs.existsSync(file));
-if (!npmCli || !fs.existsSync(npmCli)) throw new Error('Run through npm or provide a Node installation with npm');
+// Follow npm's launcher on PATH (including Unix symlinks and Windows npm.cmd),
+// rather than assuming npm belongs to the installation of the running Node.
+const launchers = [process.env.npm_execpath, ...(process.env.PATH ?? '').split(path.delimiter)
+  .filter(Boolean).map(directory => path.join(directory, process.platform === 'win32' ? 'npm.cmd' : 'npm'))]
+  .filter(file => file && fs.existsSync(file)).map(file => fs.realpathSync(file));
+const npmCli = launchers.flatMap(file => path.basename(file) === 'npm-cli.js' ? [file] :
+  [path.join(path.dirname(file), 'node_modules/npm/bin/npm-cli.js')]).find(file => fs.existsSync(file));
+if (!npmCli) throw new Error('npm was not found: run through npm or put its launcher on PATH');
 const npm = (args, cwd) => execFileSync(process.execPath, [npmCli, ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'aura-package-'));
 const start = performance.now();
 let server;
 try {

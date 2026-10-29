@@ -1,8 +1,8 @@
 # aura-protocol
 
 Small local compiler, static publisher and deterministic reference runner for the
-`2.0.0-alpha.2` profile. It is not a hosted runtime or framework.
-This source version requires explicit declarations and breaks alpha.1.
+`2.0.0-alpha.3` profile. It is not a hosted runtime or framework.
+This source version requires explicit declarations and replaces the alpha.2 contract.
 
 ## Consume AURA Without The Package
 
@@ -14,9 +14,10 @@ are separate provenance claims. The API enforces actual authority.
 ## Local build and package truth
 
 Build from the implementation branch with `pnpm install && pnpm build`.
-Schemas are public at the immutable Git tag `v2.0.0-alpha.2`.
+Schema URLs target the future immutable Git tag `v2.0.0-alpha.3`; that tag and
+the npm release have not been published. Existing release tags remain unchanged.
 Use a locally packed tarball until its npm release. After an exact-version release,
-install `aura-protocol@2.0.0-alpha.2`; avoid an unpinned latest tag.
+install `aura-protocol@2.0.0-alpha.3`; avoid an unpinned latest tag.
 
 ```bash
 aura-protocol derive openapi.json --config aura.config.json
@@ -43,6 +44,13 @@ before API calls. Execution transfers literal/from values, makes exact HTTP
 requests, validates success/media/schema and projects typed outputs. Selected
 credential outputs remain internal. Unknown transport outcomes and earlier
 completions are reported. No retry, rollback, LLM call or automatic resolver.
+Mixed model/credential visibility on overlapping pointers is rejected. Numbers
+must be finite and integers safe, including nested literals and outputs; encode
+large IDs as strings. HTTP path placeholders use literal `{name}` braces;
+percent-encoded braces are URL data. Each response's `state.actions` retains all
+validated observations, with optional `state.diagnostic` for unusable State.
+Use `stateFor(result.completed[i].state, actionId)` to query an observation;
+missing ids remain unknown. Observations never carry over to another response.
 
 Bundled schemas: `dist/aura-{v2,action,publish,config,plan,state}.schema.json`.
 Validation loads these installed files offline, never from the working directory.

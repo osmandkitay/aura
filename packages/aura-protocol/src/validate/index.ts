@@ -2,10 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import Ajv, { ValidateFunction } from "ajv";
 import { AuraConfig, AuraDocument, AuraState, Plan, PublishedAuraAction, PublishedAuraIndex } from "../schema/types";
-import { actionIntegrity, documentIntegrity, validHttpUrl } from "./integrity";
+import { actionIntegrity, conflictingOutputVisibility, documentIntegrity, validHttpUrl } from "./integrity";
 import { AURA_V2_SCHEMA_URL, AURA_ACTION_SCHEMA_URL, AURA_PUBLISH_SCHEMA_URL, AURA_CONFIG_SCHEMA_URL, AURA_PLAN_SCHEMA_URL } from "../constants";
 import { MAX_ACTION_BYTES } from "../constants";
 import { stableStringify } from "../canonical";
+import { unsupportedNumberPointer } from "../numbers";
 export type ValidationTarget = "document" | "publish" | "action" | "config" | "plan" | "state";
 export interface ValidationResult<T> { valid: boolean; target: ValidationTarget; schemaPath: string; errors: string[]; value?: T }
 const validators = new Map<ValidationTarget, { schemaPath: string; validate: ValidateFunction }>();
@@ -15,13 +16,16 @@ function validator(target: ValidationTarget) {
   const installed = path.resolve(__dirname, "..", file);
   const authored = path.resolve(__dirname, "..", "..", "schema", file);
   const schemaPath = fs.existsSync(installed) ? installed : authored;
-  const validate = new Ajv({ allErrors: true, strict: false, ownProperties: true, validateFormats: false }).compile(JSON.parse(fs.readFileSync(schemaPath, "utf8")));
+  const validate = new Ajv({ allErrors: true, strict: false, strictNumbers: true, ownProperties: true, validateFormats: false }).compile(JSON.parse(fs.readFileSync(schemaPath, "utf8")));
   const result = { schemaPath, validate }; validators.set(target, result); return result;
 }
 function check<T>(value: unknown, target: ValidationTarget, integrity?: (v: T) => string[]): ValidationResult<T> {
   const { schemaPath, validate } = validator(target);
-  const errors = validate(value) ? [] : (validate.errors ?? []).map(e => (e.instancePath || "/") +
-    (e.keyword === "required" ? "/" + e.params.missingProperty : "") + ": " + e.message);
+  const numeric = unsupportedNumberPointer(value);
+  const errors: string[] = [];
+  if (numeric !== undefined) errors.push((numeric || "/") + ": NUMBER_UNSUPPORTED: use finite numbers and safe integers; encode large IDs as strings");
+  else if (!validate(value)) errors.push(...(validate.errors ?? []).map(e => (e.instancePath || "/") +
+    (e.keyword === "required" ? "/" + e.params.missingProperty : "") + ": " + e.message));
   if (!errors.length && integrity) {
     try { errors.push(...integrity(value as T)); } catch { errors.push("/: invalid mechanical contract"); }
   }
@@ -35,6 +39,8 @@ export function validateConfig(value: unknown): ValidationResult<AuraConfig> {
     const errors = envelopeErrors(v);
     const ids = v.actions.map(a => a.id.toLowerCase());
     if (new Set(ids).size !== ids.length) errors.push("/actions: duplicate or case-colliding id");
+    for (const [i, action] of v.actions.entries())
+      if (conflictingOutputVisibility(action.outputs)) errors.push("/actions/" + i + "/outputs: conflicting output visibility on overlapping response pointers");
     return errors;
   });
 }

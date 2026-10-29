@@ -1,6 +1,8 @@
 # Local measurements
 
 Recorded 2026-10-29T01:39:50.282Z, v22.11.0, win32/x64.
+These measurements describe alpha.2. Current correctness checks and release
+limitations are recorded in [the implementation review](../implementation.md).
 Raw results: [execution and baselines](local.json), [isolated package](package.json).
 These are single loopback samples of a synthetic API. They do not establish a
 production speedup, latency distribution, reliability percentage or token saving.

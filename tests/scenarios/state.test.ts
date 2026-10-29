@@ -31,18 +31,21 @@ describe('G5 optional response-scoped State', () => {
       return response;
     };
     const result = await runPlan(f.plan, { fetch: fetcher });
-    expect(result.status).toBe('success'); expect(result.completed[0].diagnostic).toMatch(/^STATE_/);
-    expect(result.completed[0].state).toEqual({ availability: 'unknown' });
+    expect(result.status).toBe('success'); expect(result.completed[0].state.diagnostic).toMatch(/^STATE_/);
+    expect(stateFor(result.completed[0].state, 'login')).toEqual({ availability: 'unknown' });
   });
   it.each([401, 403, 429])('reports %s and a valid resolver without inserting login or retrying mutations', async status => {
     const f = runnerFixture();
-    const header = encodeState({ version: 2, revision: f.index.revision, actions: [{ id: 'create', availability: 'blocked', reason: 'blocked-in-this-response', resolve: 'login' }] });
+    const actions = [{ id: 'create', availability: 'blocked' as const, reason: 'blocked-in-this-response', resolve: 'login' },
+      { id: 'list', availability: 'available' as const }];
+    const header = encodeState({ version: 2, revision: f.index.revision, actions });
     const fetcher: typeof fetch = async (url, init) => {
       if (String(url).endsWith('/v1/posts')) { f.calls.push({ url: String(url), init }); return json({ secret: 'not visible' }, status, { 'aura-state': header }); }
       return f.fetcher(url, init);
     };
     const result = await runPlan(f.plan, { fetch: fetcher });
     expect(result.status).toBe('partial'); expect(result.failure).toMatchObject({ status: 'blocked', httpStatus: status, resolve: 'login' });
+    expect(result.failure?.state).toEqual({ actions });
     expect(f.calls).toHaveLength(2); expect(result.completed).toHaveLength(1);
     expect(JSON.stringify(result)).not.toContain('not visible');
   });

@@ -1,5 +1,5 @@
 import Ajv from "ajv";
-import { AuraAction, AuraActionSummary, AuraDocument, JsonSchema, Signature, ValueType } from "../schema/types";
+import { AuraAction, AuraActionSummary, AuraDocument, JsonSchema, Output, Signature, ValueType } from "../schema/types";
 import { AURA_ACTION_SCHEMA_URL, MAX_ACTION_BYTES, MAX_SCHEMA_DEPTH } from "../constants";
 import { pointerSegments, pointersOverlap } from "../pointer";
 import { revisionOf, stableStringify } from "../canonical";
@@ -7,6 +7,10 @@ import { revisionOf, stableStringify } from "../canonical";
 export function typeList(type: ValueType): string[] { return Array.isArray(type) ? type : [type]; }
 export function typeFits(source: ValueType, destination: ValueType): boolean {
   return typeList(source).every(t => typeList(destination).includes(t) || (t === "integer" && typeList(destination).includes("number")));
+}
+export function conflictingOutputVisibility(outputs: Output[]): boolean {
+  return outputs.some((output, i) => outputs.slice(i + 1).some(other =>
+    output.visibility !== other.visibility && pointersOverlap(output.pointer, other.pointer)));
 }
 export function schemaAt(schema: JsonSchema, pointer: string): JsonSchema | undefined {
   let current: any = schema;
@@ -94,9 +98,10 @@ export function actionIntegrity(action: AuraAction, target: string): string[] {
       }
     }
   }
-  const path = new URL(action.entrypoint.url).pathname.replace(/%7B/gi, "{").replace(/%7D/gi, "}");
-  const names = [...path.matchAll(/{([^{}]+)}/g)].map(m => m[1]);
-  if (path.replace(/{[^{}]+}/g, "").match(/[{}]/) ||
+  // Match the literal template, just as request construction does. Encoded braces are data.
+  const template = action.entrypoint.url;
+  const names = [...template.matchAll(/{([^{}]+)}/g)].map(m => m[1]);
+  if (template.replace(/{[^{}]+}/g, "").match(/[{}]/) ||
     names.some(n => !targets.has("path:" + n)) || action.bindings.some(b => b.in === "path" && !names.includes(b.name!))) add("URL template and path bindings disagree");
   for (const b of action.bindings.filter(b => b.in === "path")) {
     if (!(root.required ?? []).includes("path") || !(root.properties?.path?.required ?? []).includes(b.name)) add("Path binding input must be required");
@@ -113,6 +118,7 @@ export function actionIntegrity(action: AuraAction, target: string): string[] {
     if (auth.kind === "bearer" && (auth.name.toLowerCase() !== "authorization" || binding?.prefix !== "Bearer ")) add("Bearer auth requires explicit Authorization prefix");
     if (auth.kind === "api-key" && binding?.prefix) add("API key auth cannot add a bearer prefix");
   }
+  if (conflictingOutputVisibility(action.outputs)) add("Conflicting output visibility on overlapping response pointers");
   for (const success of action.success) {
     if (success.status === 204 && success.contentType !== null) add("204 cannot have a body");
     for (const output of action.outputs) {

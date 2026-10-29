@@ -2,6 +2,7 @@ import { MAX_SCHEMA_DEPTH } from "../constants";
 import { JsonSchema } from "../schema/types";
 import { pointerEscape, readPointer } from "../pointer";
 import { CompileError } from "./shared";
+import { unsupportedNumberPointer } from "../numbers";
 
 const keywords = new Set(["type", "properties", "required", "additionalProperties", "items",
   "enum", "const", "title", "description", "default", "examples",
@@ -28,6 +29,8 @@ export function compileSchema(root: any, raw: any, at: string, config: string, o
     return raw;
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) fail("SCHEMA", "Expected an explicit typed schema");
+  const numeric = unsupportedNumberPointer(raw);
+  if (numeric !== undefined) throw new CompileError("NUMBER_UNSUPPORTED", at + numeric, config, "Use finite numbers and safe integers; encode large IDs as strings");
   if (Object.hasOwn(raw, "$ref")) {
     const ref = raw.$ref;
     if (typeof ref !== "string" || !ref.startsWith("#/")) fail("REMOTE_REF", "Only same-document references are supported");

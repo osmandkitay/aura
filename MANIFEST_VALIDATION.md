@@ -1,6 +1,6 @@
 # Validation
 
-`aura-protocol validate <file>` and `aura-validate <file>` support alpha.2
+`aura-protocol validate <file>` and `aura-validate <file>` support alpha.3
 config, normal form, L1, L2, plan and decoded State shapes. Schemas are bundled
 and loaded relative to the installed module, without a working-directory or
 network fallback.
@@ -17,6 +17,11 @@ read every linked detail and check signatures, provenance and revisions.
 backward output references, types, input assignment conflicts and known required/
 literal inputs before API calls. Runtime validates actual inputs and response
 values; static checking cannot prove future network behavior.
+All value boundaries reject non-finite numbers and unsafe integers recursively,
+including literals under open schemas. Config/L2 integrity checks also reject
+overlapping output pointers with conflicting visibility and path bindings that
+have no literal `{name}` placeholder. JSON Schema shape validation alone does
+not replace these mechanical integrity checks.
 
 `pnpm check:schemas` checks generated schemas for source/version drift.
 `pnpm check:package` compares source/packed bytes and independently validates

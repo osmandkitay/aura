@@ -1,17 +1,18 @@
 import { readPointer, writePointer } from '../pointer';
 import { preparePlan, Fetcher, PreparedPlan } from './plan';
 import { buildRequest, projectOutputs, RunnerError, valueErrors } from './request';
-import { parseState, stateFor, StateObservation } from './state';
+import { parseState, stateFor, ParsedState } from './state';
 
 export { buildRequest, projectOutputs, RunnerError } from './request';
 export { preparePlan } from './plan';
 export { encodeState, parseState, stateFor, MAX_STATE_HEADER_BYTES } from './state';
-export interface StepResult { stepId: string; actionId: string; actionUrl: string; revision: string; httpStatus: number; outputs: Record<string, unknown>; state: StateObservation; diagnostic?: string }
+export type { ParsedState, StateObservation } from './state';
+export interface StepResult { stepId: string; actionId: string; actionUrl: string; revision: string; httpStatus: number; outputs: Record<string, unknown>; state: ParsedState }
 export interface RunResult {
   status: 'success' | 'failed' | 'blocked' | 'partial' | 'outcome-unknown';
   descriptor: string; revision: string; completed: StepResult[];
   failure?: { stepId: string; actionId: string; actionUrl: string; revision: string; code: string;
-    status: 'failed' | 'blocked' | 'outcome-unknown'; httpStatus?: number; reason?: string; resolve?: string; state?: StateObservation; diagnostic?: string };
+    status: 'failed' | 'blocked' | 'outcome-unknown'; httpStatus?: number; reason?: string; resolve?: string; state?: ParsedState };
   metrics: { descriptorGets: number; detailGets: number; apiCalls: number; responseBytes: number; parseProjectionMs: number; elapsedMs: number; intermediateLlmCalls: 0 };
 }
 async function discardBody(response: Response): Promise<void> {
@@ -50,8 +51,7 @@ export async function executePlan(prepared: PreparedPlan, options: { fetch?: Fet
       failure.httpStatus = response.status;
       const parsedState = parseState(response.headers.get('aura-state'), index);
       const observation = stateFor(parsedState, action.id);
-      failure.state = observation;
-      if (parsedState.diagnostic) failure.diagnostic = parsedState.diagnostic;
+      failure.state = parsedState;
       const success = action.success.find(s => s.status === response.status);
       if (!success) {
         failure.status = [401, 403, 429].includes(response.status) ? 'blocked' : 'failed';
@@ -77,8 +77,7 @@ export async function executePlan(prepared: PreparedPlan, options: { fetch?: Fet
       result.metrics.parseProjectionMs += performance.now() - projectStart;
       internal.set(step.stepId, projected.internal);
       result.completed.push({ stepId: step.stepId, actionId: step.actionId, actionUrl: url,
-        revision: action.revision, httpStatus: response.status, outputs: projected.visible, state: observation,
-        ...(parsedState.diagnostic ? { diagnostic: parsedState.diagnostic } : {}) });
+        revision: action.revision, httpStatus: response.status, outputs: projected.visible, state: parsedState });
     } catch (error) {
       if (dispatched && !responseRead && !(error instanceof RunnerError)) {
         failure.status = 'outcome-unknown'; failure.code = 'TRANSPORT_OUTCOME_UNKNOWN';

@@ -7,10 +7,11 @@ calls and transfers selected outputs without intermediate model calls.
 
 This is a one-package workspace. The active implementation branch is
 `feat/aura-declarative-runner`, based on `aura-core-v2` at `ba534d1`.
-The incompatible profile is `2.0.0-alpha.2`. Use the local build or a verified
+The incompatible profile is `2.0.0-alpha.3`. Use the local build or a verified
 tarball until its corresponding release is available. The public schema and npm
 release gates are distinct; see [current verification status](docs/implementation.md).
-The old alpha.1 tag is preserved.
+Existing alpha.1/alpha.2 tags are preserved; alpha.3 has not been tagged or
+published to npm.
 
 ## Build and publish
 
@@ -72,10 +73,14 @@ call. A prepared plan can be reused while the caller intentionally trusts its
 pinned snapshot. No source OpenAPI or compiler modules enter the runner.
 
 Model-visible results contain selected outputs and short status/action/revision
-information. Credential outputs transfer only inside the run. Timeout or
+information. Credential outputs transfer only inside the run; overlapping
+model/credential projections are rejected before publication. Unsafe integers
+and non-finite numbers fail explicitly, including in nested values. Use strings
+for IDs outside the safe integer range. Timeout or
 connection loss can mean `outcome-unknown`; previous completions remain visible.
 There is no retry, rollback or automatic resolver invocation. State is optional,
-response-scoped context; HTTP and target authorization remain authoritative.
+response-scoped context; each result's `state.actions` retains every validated
+observation from that response. HTTP and target authorization remain authoritative.
 
 ## Supported profile and limits
 
@@ -119,7 +124,7 @@ node scripts/check-package.mjs --remote
 That gate requires each public schema URL to return exactly the packaged bytes.
 A missing public tag is a failed release gate, not a successful local fallback.
 Exact-version npm commands become valid only after the corresponding package is
-published; no command assumes that alpha.2 is already in the registry.
+published; no command assumes that alpha.3 is already in the registry.
 
 [Acceptance evidence and limitations](docs/implementation.md),
 [measured results](docs/measurements/README.md),

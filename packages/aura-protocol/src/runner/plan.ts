@@ -3,7 +3,7 @@ import { validatePlan, validatePublishedAction, validatePublishedIndex } from '.
 import { schemaAt, typeFits } from '../validate/integrity';
 import { assertSummary } from '../surface';
 import { pointerEscape, pointersOverlap, readPointer, writePointer } from '../pointer';
-import { RunnerError, validateWireValue, valueErrors } from './request';
+import { RunnerError, validateNumbers, validateWireValue, valueErrors } from './request';
 
 export interface PreparedAction { detail: PublishedAuraAction; url: string }
 export interface PreparedPlan { plan: Plan; index: PublishedAuraIndex; actions: Map<string, PreparedAction>; detailGets: number }
@@ -18,7 +18,10 @@ export async function readArtifact(url: string, fetcher: Fetcher, timeoutMs: num
   if (response.status !== 200 || response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw new RunnerError('ARTIFACT_HTTP');
   const text = await response.text();
   if (Buffer.byteLength(text) > 1024 * 1024) throw new RunnerError('ARTIFACT_SIZE');
-  try { return JSON.parse(text); } catch { throw new RunnerError('ARTIFACT_JSON'); }
+  let value: unknown;
+  try { value = JSON.parse(text); } catch { throw new RunnerError('ARTIFACT_JSON'); }
+  validateNumbers(value);
+  return value;
 }
 export function validateAssignments(plan: Plan, actions: Map<string, PreparedAction>): void {
   const seen = new Map<string, PublishedAuraAction>();
@@ -70,6 +73,7 @@ export function validateAssignments(plan: Plan, actions: Map<string, PreparedAct
   }
 }
 export async function preparePlan(value: unknown, options: { fetch?: Fetcher; timeoutMs?: number } = {}): Promise<PreparedPlan> {
+  validateNumbers(value);
   const checked = validatePlan(value);
   if (!checked.valid) throw new RunnerError('PLAN_SCHEMA');
   const plan = structuredClone(checked.value!), fetcher = options.fetch ?? fetch, timeoutMs = options.timeoutMs ?? 10000;

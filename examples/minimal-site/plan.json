@@ -1,6 +1,6 @@
 {
-  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-plan.schema.json",
-  "profile": "2.0.0-alpha.2",
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-plan.schema.json",
+  "profile": "2.0.0-alpha.3",
   "descriptor": "https://recipes.example/raw/subdirectory/.well-known/aura.json",
   "steps": [
     {

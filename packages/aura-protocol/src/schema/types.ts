@@ -39,7 +39,7 @@ export interface AuraAction {
   requires?: string[]; errors?: AuraError[];
 }
 export interface Envelope {
-  profile: "2.0.0-alpha.2"; revision: string;
+  profile: "2.0.0-alpha.3"; revision: string;
   publisher: Publisher; source: Source; target: Target;
 }
 export interface AuraDocument extends Envelope {
@@ -57,7 +57,7 @@ export interface PublishedAuraIndex extends Envelope {
 export type Assignment = { target: string } &
   ({ value: unknown; from?: never } | { from: { step: string; output: string }; value?: never });
 export interface Plan {
-  $schema: string; profile: "2.0.0-alpha.2"; descriptor: string; revision?: string;
+  $schema: string; profile: "2.0.0-alpha.3"; descriptor: string; revision?: string;
   steps: { stepId: string; actionId: string; inputs: Assignment[] }[];
 }
 export interface AuraState {

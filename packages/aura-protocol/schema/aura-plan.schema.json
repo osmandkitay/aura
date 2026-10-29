@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-plan.schema.json",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-plan.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,10 +11,10 @@
   ],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-plan.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-plan.schema.json"
     },
     "profile": {
-      "const": "2.0.0-alpha.2"
+      "const": "2.0.0-alpha.3"
     },
     "descriptor": {
       "type": "string",
@@ -59,7 +59,9 @@
                   "type": "string",
                   "pattern": "^(?:/(?:[^~]|~[01])*)*$"
                 },
-                "value": {},
+                "value": {
+                  "$ref": "#/$defs/json"
+                },
                 "from": {
                   "type": "object",
                   "additionalProperties": false,
@@ -108,6 +110,36 @@
         }
       },
       "minItems": 1
+    }
+  },
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "number",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
     }
   }
 }

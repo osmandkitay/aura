@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-v2.schema.json",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-v2.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
   ],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-v2.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-v2.schema.json"
     },
     "protocol": {
       "const": "AURA"
@@ -25,7 +25,7 @@
       "const": "2.0"
     },
     "profile": {
-      "const": "2.0.0-alpha.2"
+      "const": "2.0.0-alpha.3"
     },
     "revision": {
       "type": "string",
@@ -179,67 +179,91 @@
             },
             "enum": {
               "type": "array",
-              "items": {},
+              "items": {
+                "$ref": "#/$defs/json"
+              },
               "minItems": 1,
               "uniqueItems": true
             },
-            "const": {},
+            "const": {
+              "$ref": "#/$defs/json"
+            },
             "title": {
               "type": "string"
             },
             "description": {
               "type": "string"
             },
-            "default": {},
+            "default": {
+              "$ref": "#/$defs/json"
+            },
             "examples": {
               "type": "array",
-              "items": {}
+              "items": {
+                "$ref": "#/$defs/json"
+              }
             },
             "minimum": {
-              "type": "number"
+              "type": "number",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             },
             "maximum": {
-              "type": "number"
+              "type": "number",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             },
             "exclusiveMinimum": {
-              "type": "number"
+              "type": "number",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             },
             "exclusiveMaximum": {
-              "type": "number"
+              "type": "number",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             },
             "multipleOf": {
               "type": "number",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
               "exclusiveMinimum": 0
             },
             "minLength": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "maxLength": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "pattern": {
               "type": "string"
             },
             "minItems": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "maxItems": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "uniqueItems": {
               "type": "boolean"
             },
             "minProperties": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "maxProperties": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           }
         }
@@ -622,6 +646,34 @@
           "uniqueItems": true
         }
       }
+    },
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "number",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
     }
   }
 }

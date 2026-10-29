@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-v2.schema.json",
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-v2.schema.json",
   "actions": [
     {
       "aliases": [
@@ -336,14 +336,14 @@
       ]
     }
   ],
-  "profile": "2.0.0-alpha.2",
+  "profile": "2.0.0-alpha.3",
   "protocol": "AURA",
   "publisher": {
     "name": "Recipe author",
     "role": "third-party",
     "url": "https://recipes.example"
   },
-  "revision": "39084a2043be44634d4580de8d6b397bcd7b418d9da2d84e9fe284036a5711fd",
+  "revision": "4dd12bcc2d3b9d63a5e0bc8e5428b8655bd5ce9c7d45855d43187619e6cc4a6b",
   "source": {
     "kind": "aura-v2",
     "url": "https://recipes.example/recipes/posts-v1.json",

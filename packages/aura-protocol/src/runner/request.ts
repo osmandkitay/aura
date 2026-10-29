@@ -1,10 +1,13 @@
 import Ajv, { ErrorObject } from 'ajv';
 import { AuraAction, Binding, JsonSchema, Output } from '../schema/types';
 import { readPointer } from '../pointer';
+import { unsupportedNumberPointer } from '../numbers';
+import { conflictingOutputVisibility } from '../validate/integrity';
 
 const ajv = new Ajv({ strict: false, strictNumbers: true, ownProperties: true, validateFormats: false, allErrors: true });
 const cache = new WeakMap<object, ReturnType<Ajv['compile']>>();
 export function valueErrors(schema: JsonSchema, value: unknown): ErrorObject[] {
+  validateNumbers(value);
   let validate = typeof schema === 'object' ? cache.get(schema) : undefined;
   if (!validate) { validate = ajv.compile(schema); if (typeof schema === 'object') cache.set(schema, validate); }
   return validate(value) ? [] : [...(validate.errors ?? [])];
@@ -13,6 +16,10 @@ export class RunnerError extends Error {
   constructor(public code: string, public location: string = '/') {
     super(`${code} at ${location}`); this.name = 'RunnerError';
   }
+}
+export function validateNumbers(value: unknown): void {
+  const pointer = unsupportedNumberPointer(value);
+  if (pointer !== undefined) throw new RunnerError('NUMBER_UNSUPPORTED', pointer || '/');
 }
 export interface BuiltRequest { method: string; url: string; headers: Record<string, string>; body?: string }
 export function validateWireValue(binding: Binding, value: unknown): void {
@@ -38,6 +45,7 @@ export function buildRequest(action: AuraAction, input: unknown): BuiltRequest {
     validateWireValue(binding, value);
     if (binding.in === 'body') { body = JSON.stringify(value); headers['content-type'] = 'application/json'; }
     else if (binding.in === 'path') {
+      if (!template.includes('{' + binding.name + '}')) throw new RunnerError('PATH_TEMPLATE', binding.input);
       // URL parsers normalize dot segments even when their dots are percent-encoded.
       const encoded = encodeURIComponent(String(value)).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
       pathValues.set(binding.name!, encoded);
@@ -52,11 +60,13 @@ export function buildRequest(action: AuraAction, input: unknown): BuiltRequest {
     if (!pathValues.has(name)) throw new RunnerError('PATH_MISSING');
     return pathValues.get(name)!;
   });
+  if (/[{}]/.test(template)) throw new RunnerError('PATH_TEMPLATE');
   const url = new URL(template);
   for (const [name, value] of query) url.searchParams.append(name, value);
   return { method: action.entrypoint.method, url: url.href, headers, ...(body === undefined ? {} : { body }) };
 }
 export function projectOutputs(outputs: Output[], value: unknown): { internal: Record<string, unknown>; visible: Record<string, unknown> } {
+  if (conflictingOutputVisibility(outputs)) throw new RunnerError('OUTPUT_VISIBILITY');
   const internal: Record<string, unknown> = Object.create(null), visible: Record<string, unknown> = Object.create(null);
   for (const output of outputs) {
     const selected = value === undefined ? { found: false } : readPointer(value, output.pointer);
