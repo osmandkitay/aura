@@ -14,8 +14,9 @@ are separate provenance claims. The API enforces actual authority.
 ## Local build and package truth
 
 Build from the implementation branch with `pnpm install && pnpm build`.
-Schema URLs target the future immutable Git tag `v2.0.0-alpha.3`; that tag and
-the npm release have not been published. Existing release tags remain unchanged.
+Schema URLs target the immutable Git tag `v2.0.0-alpha.3`. Public availability
+and exact schema bytes must pass tag CI before npm publication. The npm release
+is pending authenticated publisher access. Existing release tags remain unchanged.
 Use a locally packed tarball until its npm release. After an exact-version release,
 install `aura-protocol@2.0.0-alpha.3`; avoid an unpinned latest tag.
 

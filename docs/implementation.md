@@ -1,4 +1,29 @@
-# Current review and verification
+# Alpha.3 release preparation (2026-10-29)
+
+Release preparation starts from reviewed commit `a25ea33ec76d992b34935eebe53b73d93f2fce66`.
+The remote implementation branch still points there. Its [CI run](https://github.com/osmandkitay/aura/actions/runs/40810648388)
+passed Linux and Windows install, build, scenario tests, schema consistency and
+isolated archive checks. That evidence is reused for unchanged product code.
+Only release-status documentation changes in this preparation.
+
+Registry inspection found versions 1.0.0 through 1.0.5, `latest=1.0.5`, no alpha
+dist-tag and no alpha.3 release. Remote alpha.1/alpha.2 tags are preserved.
+Workspace/package versions, profile constants/types, six generated schemas and
+examples already agree on 2.0.0-alpha.3; the lockfile has no workspace version
+entry to update. `task.md` remains ignored and untracked; generated output is
+excluded from commits.
+
+Npm publication is blocked: `npm whoami` and `npm access list packages --json`
+return E401 Unauthorized. No registry upload has been attempted. After the exact
+release commit is built and its archive independently installed, the new
+annotated tag must pass Linux/Windows CI and all six public schema URLs must
+match the packaged bytes. The PR records the final commit, archive integrity,
+tag and gate evidence. Publish that verified archive with `--tag alpha` only
+after those gates and authenticated package write access; preserve `latest`.
+Registry integrity and installation outside the repository remain pending until
+publication succeeds. Historical alpha.2 measurements are not alpha.3 benchmarks.
+
+## Previous implementation review and verification
 
 Reviewed `f943371` on `feat/aura-declarative-runner` against the local task
 requirements before product edits. The tracked worktree started clean. Baseline
@@ -44,10 +69,10 @@ Verification on Windows with Node v22.11.0 and pnpm 10.7.1:
   into a clean output directory; profile changes do not bypass ownership checks.
 - `git diff --check`: passed.
 
-`node scripts/check-package.mjs --remote` fails with **HTTP 404** for the new
+At the previous review, `node scripts/check-package.mjs --remote` failed with **HTTP 404** for the new
 alpha.3 schema tag. This is an unmet public-release prerequisite, not a passing
-schema check or an environmental blocker. No alpha.3 tag or npm package was
-published. Local verification has no remaining environmental blockers.
+schema check or an environmental blocker. No alpha.3 tag or npm package had
+been published at that review. Local verification had no remaining environmental blockers.
 `task.md` is unchanged locally, removed from tracking and ignored; it is excluded
 from the new commit tree. Earlier Git history is unchanged. Fractional numbers retain binary64 rounding,
 credentials still depend on explicit declarations, and the scope limits in the

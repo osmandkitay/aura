@@ -5,8 +5,9 @@ Regenerate declarations and artifacts against this profile. Older formats are
 rejected directly; no migration runtime or compatibility adapter is shipped.
 Use a clean publish directory when changing profiles; an old-profile descriptor
 does not establish ownership of files for the current publisher.
-Existing release tags are immutable. Alpha.3 needs a new tag and a separately
-authorized npm release before its public schema/install commands can be used.
+Existing release tags are immutable. Public schema commands require the new
+alpha.3 tag and verified schema bytes; npm install commands require the separate
+registry publication, currently pending authenticated publisher access.
 
 ## Changes from alpha.2
 

@@ -10,8 +10,8 @@ This is a one-package workspace. The active implementation branch is
 The incompatible profile is `2.0.0-alpha.3`. Use the local build or a verified
 tarball until its corresponding release is available. The public schema and npm
 release gates are distinct; see [current verification status](docs/implementation.md).
-Existing alpha.1/alpha.2 tags are preserved; alpha.3 has not been tagged or
-published to npm.
+Existing alpha.1/alpha.2 tags are preserved. Alpha.3 npm publication is pending
+authenticated publisher access; Git tag/schema verification is a separate gate.
 
 ## Build and publish
 
