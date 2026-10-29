@@ -1,223 +1,58 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { deriveDocument, publishDocument } from "../../packages/aura-protocol/src";
-import { writeJsonFile } from "../../packages/aura-protocol/src/filesystem";
-import { ROOT, createScenarioTempDir, readJson, removeDirectory } from "./helpers";
-
-describe("Scenario J - OpenAPI golden publish", () => {
-  it("keeps the minimal OpenAPI derive/publish story locked to the expected release artifact shape", () => {
-    const fixturePath = path.join(ROOT, "examples", "minimal-site", "source", "openapi.json");
-    const fixture = readJson<unknown>(fixturePath);
-    const document = deriveDocument(fixture);
-    const scenarioRoot = createScenarioTempDir("aura-scenario-j-");
-
+import { describe, expect, it, vi } from "vitest";
+import { deriveDocument, finalizeDocument, publishDocument, validatePublication } from "../../packages/aura-protocol/src";
+import { toPublishedAction, toPublishedIndex } from "../../packages/aura-protocol/src/surface";
+import { fixture } from "./contract-fixture";
+import { createScenarioTempDir, removeDirectory, snapshotDirectory } from "./helpers";
+describe("G3 publication integrity", () => {
+  it("publishes compact relative L1 and self-contained L2; detects revision/href/duplicate drift", () => {
+    const { source, config } = fixture(), doc = deriveDocument(source, config), temp = createScenarioTempDir("aura-publish-");
     try {
-      const derivedPath = path.join(scenarioRoot, "dist", ".derived", "aura-v2.json");
-      writeJsonFile(derivedPath, document);
-      const derivedArtifact = readJson<{
-        actions: Array<Record<string, unknown> & { id: string }>;
-      }>(derivedPath);
-      expect(derivedArtifact).toEqual({
-        $schema: "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-v2.schema.json",
-        protocol: "AURA",
-        version: "2.0",
-        site: {
-          name: "Minimal Site",
-          url: "https://minimal.example.com",
-          description: "A tiny action surface for publishing posts."
-        },
-        source: {
-          kind: "openapi"
-        },
-        actions: [
-          {
-            id: "post.list",
-            key: "post.list",
-            title: "List published posts",
-            intent: { domain: "post", verb: "list" },
-            entrypoint: {
-              type: "http",
-              method: "GET",
-              path: "/posts",
-              encoding: "query",
-              parameterLocation: { tag: "query" },
-              parameterMapping: { tag: "/tag" }
-            },
-            confirm: "never",
-            risk: "low",
-            input: {
-              type: "object",
-              properties: {
-                tag: { type: "string" }
-              }
-            },
-            result: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  id: { type: "string" },
-                  title: { type: "string" }
-                }
-              }
-            },
-            docs: { summary: "List published posts" },
-            aliases: ["GET /posts", "listPosts"],
-            origin: {
-              source: "openapi",
-              path: "/posts",
-              operationId: "listPosts",
-              method: "GET",
-              ref: "#/paths/~1posts/get",
-              summary: "List published posts"
-            },
-            confidence: {
-              label: "high",
-              score: 0.9,
-              reason: "matched listing vocabulary"
-            }
-          },
-          {
-            id: "post.publish",
-            key: "post.publish",
-            title: "Publish a new post",
-            intent: { domain: "post", verb: "publish" },
-            entrypoint: {
-              type: "http",
-              method: "POST",
-              path: "/posts",
-              encoding: "json",
-              parameterLocation: { content: "body", title: "body" },
-              parameterMapping: { content: "/content", title: "/title" }
-            },
-            confirm: "suggested",
-            risk: "medium",
-            input: {
-              type: "object",
-              properties: {
-                content: { type: "string" },
-                title: { type: "string" }
-              },
-              required: ["content", "title"]
-            },
-            result: {
-              type: "object",
-              properties: {
-                id: { type: "string" }
-              }
-            },
-            docs: { summary: "Publish a new post" },
-            aliases: ["POST /posts", "publishPost"],
-            origin: {
-              source: "openapi",
-              path: "/posts",
-              operationId: "publishPost",
-              method: "POST",
-              ref: "#/paths/~1posts/post",
-              summary: "Publish a new post"
-            },
-            confidence: {
-              label: "high",
-              score: 0.9,
-              reason: "matched publish vocabulary"
-            }
-          },
-          {
-            id: "session.login",
-            key: "session.login",
-            title: "Log in to a session",
-            intent: { domain: "session", verb: "login" },
-            entrypoint: {
-              type: "http",
-              method: "POST",
-              path: "/session/login",
-              encoding: "json",
-              parameterLocation: { email: "body", password: "body" },
-              parameterMapping: { email: "/email", password: "/password" }
-            },
-            auth: { kind: "none", required: false },
-            confirm: "never",
-            risk: "low",
-            input: {
-              type: "object",
-              properties: {
-                email: { type: "string" },
-                password: { type: "string" }
-              },
-              required: ["email", "password"]
-            },
-            docs: { summary: "Log in to a session" },
-            aliases: ["POST /session/login", "loginUser"],
-            origin: {
-              source: "openapi",
-              path: "/session/login",
-              operationId: "loginUser",
-              method: "POST",
-              ref: "#/paths/~1session~1login/post",
-              summary: "Log in to a session"
-            },
-            confidence: {
-              label: "high",
-              score: 0.96,
-              reason: "matched a session login pattern"
-            }
-          }
-        ]
-      });
-
-      const published = publishDocument(document, path.join(scenarioRoot, "dist"));
-      expect(published.index).toEqual({
-        $schema: "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-publish.schema.json",
-        protocol: "AURA",
-        version: "2.0",
-        site: {
-          name: "Minimal Site",
-          url: "https://minimal.example.com",
-          description: "A tiny action surface for publishing posts."
-        },
-        actions: [
-          {
-            id: "post.list",
-            key: "post.list",
-            title: "List published posts",
-            intent: { domain: "post", verb: "list" },
-            href: "/.well-known/aura/actions/post.list.json",
-            confirm: "never",
-            risk: "low"
-          },
-          {
-            id: "post.publish",
-            key: "post.publish",
-            title: "Publish a new post",
-            intent: { domain: "post", verb: "publish" },
-            href: "/.well-known/aura/actions/post.publish.json",
-            confirm: "suggested",
-            risk: "medium"
-          },
-          {
-            id: "session.login",
-            key: "session.login",
-            title: "Log in to a session",
-            intent: { domain: "session", verb: "login" },
-            href: "/.well-known/aura/actions/session.login.json",
-            auth: { kind: "none", required: false },
-            confirm: "never",
-            risk: "low"
-          }
-        ]
-      });
-
-      for (const action of derivedArtifact.actions) {
-        const detailPath = path.join(scenarioRoot, "dist", ".well-known", "aura", "actions", `${action.id}.json`);
-        expect(fs.existsSync(detailPath)).toBe(true);
-        expect(readJson(detailPath)).toEqual({
-          $schema: "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-action.schema.json",
-          ...action
-        });
+      const result = publishDocument(doc, temp);
+      expect(result.index.actions[0]).toEqual({ id: "create", key: "post.create", href: "aura/actions/create.json",
+        inputs: [{ name: "/body", type: "object", required: true }, { name: "/body/title", type: "string", required: true }, { name: "/header/Authorization", type: "string", required: true }],
+        outputs: [{ name: "created_id", type: "string", required: true }], requires: ["login"] });
+      expect(result.index).not.toHaveProperty("description");
+      validatePublication(result.indexPath);
+      const detail = toPublishedAction(doc, doc.actions[0]); detail.revision = "0".repeat(64);
+      fs.writeFileSync(result.actionPaths[0], JSON.stringify(detail));
+      expect(() => validatePublication(result.indexPath)).toThrow(/MISMATCH/);
+      fs.writeFileSync(result.actionPaths[0], JSON.stringify(toPublishedAction(doc, doc.actions[0])));
+      for (const mutate of [(v: any) => v.actions.push(v.actions[0]), (v: any) => v.actions[0].href = "../escape.json"]) {
+        const index = toPublishedIndex(doc); mutate(index); fs.writeFileSync(result.indexPath, JSON.stringify(index));
+        expect(() => validatePublication(result.indexPath)).toThrow();
       }
-    } finally {
-      removeDirectory(scenarioRoot);
-    }
+    } finally { removeDirectory(temp); }
+  });
+  it("retires only owned files and preserves a valid publication after an interrupted commit", () => {
+    const { source, config } = fixture(), doc = deriveDocument(source, config), temp = createScenarioTempDir("aura-rollback-");
+    try {
+      publishDocument(doc, temp);
+      const unrelated = path.join(temp, ".well-known/aura/actions/notes.txt"); fs.writeFileSync(unrelated, "keep");
+      const { revision, ...content } = doc;
+      const reduced = finalizeDocument({ ...content, actions: doc.actions.filter(a => a.id !== "list") });
+      publishDocument(reduced, temp);
+      expect(fs.existsSync(path.join(temp, ".well-known/aura/actions/list.json"))).toBe(false);
+      expect(fs.readFileSync(unrelated, "utf8")).toBe("keep");
+      const baseline = snapshotDirectory(temp), original = fs.copyFileSync;
+      let copies = 0;
+      const spy = vi.spyOn(fs, "copyFileSync").mockImplementation((...args) => {
+        if (++copies === 2) throw new Error("injected commit failure");
+        return original(...args);
+      });
+      try { expect(() => publishDocument(doc, temp)).toThrow(/injected commit failure/); } finally { spy.mockRestore(); }
+      expect(snapshotDirectory(temp)).toEqual(baseline);
+      validatePublication(path.join(temp, ".well-known/aura.json"));
+      expect(fs.readdirSync(temp).some(p => p.startsWith(".aura-stage"))).toBe(false);
+    } finally { removeDirectory(temp); }
+  });
+  it("rejects unowned collisions without deleting user files", () => {
+    const { source, config } = fixture(), temp = createScenarioTempDir("aura-unowned-");
+    try {
+      const file = path.join(temp, ".well-known/aura/actions/create.json"); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, "user");
+      expect(() => publishDocument(deriveDocument(source, config), temp)).toThrow(/UNOWNED_PATH/);
+      expect(fs.readFileSync(file, "utf8")).toBe("user");
+    } finally { removeDirectory(temp); }
   });
 });

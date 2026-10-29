@@ -19,9 +19,14 @@ Do not add:
 
 1. keep changes inside `packages/aura-protocol`, `examples`, and focused docs
 2. preserve the two-command story: `derive` then `publish` to a small well-known surface
-3. prefer action semantics over raw endpoint naming
+3. require explicit publisher-declared semantics and risk; never infer them
 4. preserve provenance in `aliases` and `origin`
 5. validate behavior with scenario tests before calling work done
+
+`task.md` explicitly permits a small deterministic reference runner in this
+package: one linear plan, one descriptor, one API origin, HTTP binding and typed
+output transfer. It must not import compiler modules. Demo app/server/client
+stacks, planners, crawlers, hosted services and retry engines remain out of scope.
 
 ## Required checks
 

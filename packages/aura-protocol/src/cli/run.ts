@@ -1,6 +1,6 @@
 import { stableStringify } from "../canonical";
 import { deriveFile } from "../derive";
-import { publishFile } from "../publish";
+import { publishFile, validatePublication } from "../publish";
 import { defaultDeriveOutputPath } from "../filesystem";
 import { validateFile } from "../validate";
 
@@ -21,6 +21,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     const flagName = value.slice(2);
+    if (Object.hasOwn(flags, flagName)) throw new Error(`Repeated flag: --${flagName}`);
     const next = argv[index + 1];
     if (next && !next.startsWith("--")) {
       flags[flagName] = next;
@@ -50,7 +51,7 @@ Small AURA 2.0 core compiler for local files.
 Published AURA is consumed directly from /.well-known/aura.json without this CLI.
 
 Commands:
-  derive <input> [--out <file>] [--stdout]
+  derive <input> [--config <file>] [--out <file>] [--stdout]
   publish <input> --out <dir>
   validate <file>
 
@@ -61,7 +62,7 @@ Defaults:
 
 function printCommandHelp(command: string): void {
   if (command === "derive") {
-    console.log("derive <input> [--out <file>] [--stdout]");
+    console.log("derive <input> [--config <file>] [--out <file>] [--stdout]");
     return;
   }
 
@@ -91,9 +92,16 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
     return 0;
   }
 
-  const parsed = parseArgs(rest);
-
+  let parsed: ParsedArgs = { positionals: [], flags: {} };
   try {
+    parsed = parseArgs(rest);
+    const allowed = command === "derive" ? ["config", "out", "stdout"] : command === "publish" ? ["out"] : [];
+    if (parsed.positionals.length !== 1 || Object.keys(parsed.flags).some(k => !allowed.includes(k))) {
+      throw new Error("Expected one input path and only documented flags.");
+    }
+    for (const [key, value] of Object.entries(parsed.flags)) {
+      if ((key === "stdout" && value !== true) || (key !== "stdout" && typeof value !== "string")) throw new Error("Invalid value for --" + key);
+    }
     if (command === "derive") {
       const input = parsed.positionals[0];
       if (!input) {
@@ -105,6 +113,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       }
 
       const result = deriveFile(input, {
+        configPath: flagValue(parsed, "config"),
         outFile: flagValue(parsed, "out"),
         writeToDisk: !hasFlag(parsed, "stdout")
       });
@@ -145,6 +154,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
         return 1;
       }
 
+      if (result.target === "publish") validatePublication(filePath);
       console.log(`Valid ${result.target} (${result.schemaPath})`);
       return 0;
     }

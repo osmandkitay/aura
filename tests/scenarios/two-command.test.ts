@@ -16,7 +16,8 @@ describe("Scenario C - two-command happy path", () => {
         path.join(scenarioRoot, "source", "openapi.json")
       );
 
-      execFileSync("node", [CLI_PATH, "derive", path.join(scenarioRoot, "source", "openapi.json")], {
+      fs.copyFileSync(path.join(ROOT, "examples/minimal-site/aura.config.json"), path.join(scenarioRoot, "aura.config.json"));
+      execFileSync("node", [CLI_PATH, "derive", path.join(scenarioRoot, "source", "openapi.json"), "--config", path.join(scenarioRoot, "aura.config.json")], {
         cwd: ROOT,
         stdio: "pipe"
       });
@@ -45,7 +46,7 @@ describe("Scenario C - two-command happy path", () => {
 
       const index = readJson<{ actions: Array<{ id: string; key: string; href: string }> }>(indexPath);
       for (const action of index.actions) {
-        const detailPath = path.join(scenarioRoot, "dist", ...action.href.split("/").filter(Boolean));
+        const detailPath = path.resolve(path.dirname(indexPath), action.href);
         expect(fs.existsSync(detailPath)).toBe(true);
 
         const detailValidation = validateFile(detailPath);

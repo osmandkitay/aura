@@ -1,6 +1,7 @@
 export * from "./constants";
 export * from "./schema/types";
-export { normalizeActionSemantics, inferConfirm, inferRisk, humanizeIntent } from "./normalize";
 export { deriveDocument, deriveFile, detectInputKind } from "./derive";
-export { publishDocument, publishFile } from "./publish";
-export { validateAuraDocument, validatePublishedAction, validatePublishedIndex, validateAny, validateFile } from "./validate";
+export { finalizeDocument } from "./derive/shared";
+export { publishDocument, publishFile, validatePublication } from "./publish";
+export * from "./validate";
+export { runPlan, preparePlan, executePlan, buildRequest, projectOutputs, encodeState, parseState, stateFor } from "./runner";

@@ -1,151 +1,73 @@
 import fs from "node:fs";
 import path from "node:path";
-import Ajv, { ErrorObject, ValidateFunction } from "ajv";
-import { finalizedActionIntegrityError } from "../derive/shared";
-import { PublishedAuraAction, AuraDocument, PublishedAuraIndex } from "../schema/types";
-
-type ValidationTarget = "document" | "publish" | "action";
-
-export interface ValidationResult<T> {
-  valid: boolean;
-  target: ValidationTarget;
-  schemaPath: string;
-  errors: string[];
-  value?: T;
+import Ajv, { ValidateFunction } from "ajv";
+import { AuraConfig, AuraDocument, AuraState, Plan, PublishedAuraAction, PublishedAuraIndex } from "../schema/types";
+import { actionIntegrity, documentIntegrity, validHttpUrl } from "./integrity";
+import { AURA_V2_SCHEMA_URL, AURA_ACTION_SCHEMA_URL, AURA_PUBLISH_SCHEMA_URL, AURA_CONFIG_SCHEMA_URL, AURA_PLAN_SCHEMA_URL } from "../constants";
+import { MAX_ACTION_BYTES } from "../constants";
+import { stableStringify } from "../canonical";
+export type ValidationTarget = "document" | "publish" | "action" | "config" | "plan" | "state";
+export interface ValidationResult<T> { valid: boolean; target: ValidationTarget; schemaPath: string; errors: string[]; value?: T }
+const validators = new Map<ValidationTarget, { schemaPath: string; validate: ValidateFunction }>();
+function validator(target: ValidationTarget) {
+  if (validators.has(target)) return validators.get(target)!;
+  const file = "aura-" + ({ document: "v2", publish: "publish", action: "action", config: "config", plan: "plan", state: "state" }[target]) + ".schema.json";
+  const installed = path.resolve(__dirname, "..", file);
+  const authored = path.resolve(__dirname, "..", "..", "schema", file);
+  const schemaPath = fs.existsSync(installed) ? installed : authored;
+  const validate = new Ajv({ allErrors: true, strict: false, ownProperties: true, validateFormats: false }).compile(JSON.parse(fs.readFileSync(schemaPath, "utf8")));
+  const result = { schemaPath, validate }; validators.set(target, result); return result;
 }
-
-const validatorCache = new Map<ValidationTarget, { schemaPath: string; validate: ValidateFunction }>();
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function findSchemaPath(fileName: string): string {
-  const candidates = [
-    path.resolve(__dirname, "..", fileName),
-    path.resolve(__dirname, "..", "..", "schema", fileName),
-    path.resolve(process.cwd(), "packages", "aura-protocol", "schema", fileName),
-    path.resolve(process.cwd(), "schema", fileName)
-  ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
+function check<T>(value: unknown, target: ValidationTarget, integrity?: (v: T) => string[]): ValidationResult<T> {
+  const { schemaPath, validate } = validator(target);
+  const errors = validate(value) ? [] : (validate.errors ?? []).map(e => (e.instancePath || "/") +
+    (e.keyword === "required" ? "/" + e.params.missingProperty : "") + ": " + e.message);
+  if (!errors.length && integrity) {
+    try { errors.push(...integrity(value as T)); } catch { errors.push("/: invalid mechanical contract"); }
   }
-
-  throw new Error(`Schema asset ${fileName} was not found.`);
+  return { valid: !errors.length, target, schemaPath, errors, ...(!errors.length ? { value: value as T } : {}) };
 }
-
-function schemaFileName(target: ValidationTarget): string {
-  switch (target) {
-    case "document":
-      return "aura-v2.schema.json";
-    case "publish":
-      return "aura-publish.schema.json";
-    case "action":
-      return "aura-action.schema.json";
-  }
+function envelopeErrors(v: any): string[] {
+  return [v.target.url, v.publisher.url, v.source.url].every(url => validHttpUrl(url)) ? [] : ["/: provenance/target URLs must be concrete HTTP(S) without credentials/query/fragment"];
 }
-
-function getValidator(target: ValidationTarget): { schemaPath: string; validate: ValidateFunction } {
-  const cached = validatorCache.get(target);
-  if (cached) {
-    return cached;
-  }
-
-  const schemaPath = findSchemaPath(schemaFileName(target));
-  const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
-  const ajv = new Ajv({ allErrors: true, strict: false });
-  const validate = ajv.compile(schema);
-  const loaded = { schemaPath, validate };
-  validatorCache.set(target, loaded);
-  return loaded;
-}
-
-function formatAjvErrors(errors: ErrorObject[] | null | undefined): string[] {
-  if (!errors || errors.length === 0) {
-    return [];
-  }
-
-  return errors.map((error) => {
-    const instancePath = error.instancePath || "/";
-    return `${instancePath}: ${error.message}`;
+export function validateConfig(value: unknown): ValidationResult<AuraConfig> {
+  return check(value, "config", v => {
+    const errors = envelopeErrors(v);
+    const ids = v.actions.map(a => a.id.toLowerCase());
+    if (new Set(ids).size !== ids.length) errors.push("/actions: duplicate or case-colliding id");
+    return errors;
   });
 }
-
-export function detectValidationTarget(value: unknown): ValidationTarget {
-  if (isObject(value) && Array.isArray(value.actions)) {
-    if (isObject(value.source)) {
-      return "document";
-    }
-
-    return "publish";
-  }
-
-  if (isObject(value) && typeof value.key === "string" && isObject(value.intent)) {
-    return "action";
-  }
-
-  throw new Error("Could not determine which AURA schema to validate against.");
-}
-
-function validateWithSchema<T>(value: unknown, target: ValidationTarget): ValidationResult<T> {
-  const { schemaPath, validate } = getValidator(target);
-  const valid = validate(value);
-
-  return {
-    valid: Boolean(valid),
-    target,
-    schemaPath,
-    errors: formatAjvErrors(validate.errors),
-    value: valid ? (value as T) : undefined
-  };
-}
-
 export function validateAuraDocument(value: unknown): ValidationResult<AuraDocument> {
-  const result = validateWithSchema<AuraDocument>(value, "document");
-  if (!result.valid || !result.value) {
-    return result;
-  }
-
-  const integrityError = finalizedActionIntegrityError(result.value);
-  if (!integrityError) {
-    return result;
-  }
-
-  return {
-    ...result,
-    valid: false,
-    errors: [...result.errors, integrityError],
-    value: undefined
-  };
+  return check(value, "document", v => [...envelopeErrors(v), ...documentIntegrity(v)]);
 }
-
-export function validatePublishedIndex(value: unknown): ValidationResult<PublishedAuraIndex> {
-  return validateWithSchema<PublishedAuraIndex>(value, "publish");
-}
-
 export function validatePublishedAction(value: unknown): ValidationResult<PublishedAuraAction> {
-  return validateWithSchema<PublishedAuraAction>(value, "action");
+  return check(value, "action", v => [...envelopeErrors(v), ...actionIntegrity(v, v.target.url)]);
 }
-
-export function validateAny(value: unknown): ValidationResult<AuraDocument | PublishedAuraIndex | PublishedAuraAction> {
-  const target = detectValidationTarget(value);
-
-  if (target === "document") {
-    return validateAuraDocument(value);
-  }
-
-  if (target === "publish") {
-    return validatePublishedIndex(value);
-  }
-
-  return validatePublishedAction(value);
+export function validatePublishedIndex(value: unknown): ValidationResult<PublishedAuraIndex> {
+  return check(value, "publish", v => {
+    const errors = envelopeErrors(v), ids = v.actions.map(a => a.id);
+    if (Buffer.byteLength(stableStringify(v)) > MAX_ACTION_BYTES) errors.push("/: serialized index exceeds 1 MiB");
+    if (new Set(ids.map(id => id.toLowerCase())).size !== ids.length) errors.push("/actions: duplicate id");
+    for (const a of v.actions) {
+      if (a.href !== "aura/actions/" + a.id + ".json") errors.push("/actions: href disagrees with id");
+      for (const id of a.requires ?? []) if (!ids.includes(id)) errors.push("/actions: unknown requires id");
+    }
+    return errors;
+  });
 }
-
-export function validateFile(filePath: string): ValidationResult<AuraDocument | PublishedAuraIndex | PublishedAuraAction> {
-  const source = fs.readFileSync(path.resolve(filePath), "utf8");
-  const value = JSON.parse(source) as unknown;
-  return validateAny(value);
+export const validatePlan = (value: unknown): ValidationResult<Plan> => check(value, "plan");
+export const validateState = (value: unknown): ValidationResult<AuraState> => check(value, "state");
+export function validateAny(value: unknown): ValidationResult<any> {
+  const v = value as any;
+  if (v?.$schema === AURA_V2_SCHEMA_URL) return validateAuraDocument(v);
+  if (v?.$schema === AURA_ACTION_SCHEMA_URL) return validatePublishedAction(v);
+  if (v?.$schema === AURA_PUBLISH_SCHEMA_URL) return validatePublishedIndex(v);
+  if (v?.$schema === AURA_CONFIG_SCHEMA_URL) return validateConfig(v);
+  if (v?.$schema === AURA_PLAN_SCHEMA_URL) return validatePlan(v);
+  if (v?.version === 2 && Array.isArray(v?.actions) && v.$schema === undefined) return validateState(v);
+  throw new Error("Could not determine AURA validation target");
+}
+export function validateFile(filePath: string): ValidationResult<any> {
+  return validateAny(JSON.parse(fs.readFileSync(path.resolve(filePath), "utf8")));
 }

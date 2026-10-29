@@ -1,83 +1,34 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { expect, it } from "vitest";
+import { AURA_PROFILE, validateAuraDocument } from "../../packages/aura-protocol/src";
 import { CLI_PATH, ROOT } from "./helpers";
-
-type PackageJsonLike = {
-  version?: string;
-  scripts?: Record<string, string>;
-  publishConfig?: Record<string, unknown>;
-};
-
-function trackedFiles(...paths: string[]): string[] {
-  const output = execFileSync("git", ["ls-files", ...paths], {
-    cwd: ROOT,
-    encoding: "utf8"
-  });
-
-  return output
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => fs.existsSync(path.join(ROOT, line)));
-}
-
-describe("Scenario A - repo shape truth test", () => {
-  it("keeps the repo free of demo weight and tells a truthful one-package release story", () => {
-    expect(fs.existsSync(path.join(ROOT, "packages", "reference-server"))).toBe(false);
-    expect(fs.existsSync(path.join(ROOT, "packages", "reference-client"))).toBe(false);
-
-    const packagesDirectory = fs
-      .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
-    expect(packagesDirectory).toEqual(["aura-protocol"]);
-    const tempFiles = ["temp", "tmp"]
-      .filter((directory) => fs.existsSync(path.join(ROOT, directory)))
-      .flatMap((directory) =>
-        fs
-          .readdirSync(path.join(ROOT, directory), { recursive: true, withFileTypes: true })
-          .filter((entry) => !entry.isDirectory())
-          .map((entry) => entry.name)
-      );
-    expect(tempFiles).toEqual([]);
-
-    const rootPackage = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")) as PackageJsonLike;
-    const protocolPackage = JSON.parse(fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "package.json"), "utf8")) as PackageJsonLike;
-    expect(rootPackage.version).toBe("2.0.0-alpha.1");
-    expect(protocolPackage.version).toBe(rootPackage.version);
-    expect(rootPackage.scripts?.build).toBe("pnpm --filter aura-protocol build");
-    expect(protocolPackage.publishConfig).toMatchObject({ access: "public", tag: "alpha" });
-    expect(trackedFiles(".github")).toEqual([".github/workflows/ci.yml"]);
-    expect(trackedFiles("examples")).toEqual(["examples/minimal-site/source/openapi.json"]);
-
-    const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-    expect(readme).not.toContain("aura-reference-server");
-    expect(readme).not.toContain("aura-reference-client");
-    expect(readme).not.toContain("local AURA v1 JSON");
-    expect(readme).not.toContain("npx aura-protocol derive");
-    expect(readme).toContain("Consumers do not need this repo or package.");
-    expect(readme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
-    expect(readme).toContain("node packages/aura-protocol/dist/cli/aura-protocol.js derive");
-    expect(readme).toContain("Agent-Usable Resource Assertion");
-    expect(readme).toContain("one-package workspace");
-
-    const ciWorkflow = fs.readFileSync(path.join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
-    expect(ciWorkflow).not.toContain("aura-reference-server");
-    expect(ciWorkflow).not.toContain("aura-reference-client");
-
-    const packageReadme = fs.readFileSync(path.join(ROOT, "packages", "aura-protocol", "README.md"), "utf8");
-    expect(packageReadme).toContain("Consume AURA Without The Package");
-    expect(packageReadme).not.toContain("local AURA v1 JSON");
-    expect(packageReadme).toContain("plain `npx aura-protocol` does not yet run this 2.0 code");
-    expect(packageReadme).toContain("npx aura-protocol@2.0.0-alpha.1 derive <input>");
-
-    const cliHelp = execFileSync("node", [CLI_PATH, "--help"], {
-      cwd: ROOT,
-      encoding: "utf8"
-    });
-    expect(cliHelp).toContain("Small AURA 2.0 core compiler for local files.");
-    expect(cliHelp).toContain("Published AURA is consumed directly from /.well-known/aura.json without this CLI.");
-  });
+it("keeps one package, matching release metadata, bundled docs and a compiler-free runner entry", () => {
+  expect(fs.readdirSync(path.join(ROOT, "packages"), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)).toEqual(["aura-protocol"]);
+  const root = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "packages/aura-protocol/package.json"), "utf8"));
+  expect(root.version).toBe(AURA_PROFILE); expect(pkg.version).toBe(AURA_PROFILE);
+  expect(pkg.bin["aura-runner"]).toBe("./dist/cli/aura-runner.js");
+  expect(pkg.exports["./runner"].default).toBe("./dist/runner/index.js");
+  expect(pkg.publishConfig).toEqual({ access: "public", tag: "alpha" });
+  const visited = new Set<string>();
+  const visit = (file: string): void => {
+    if (visited.has(file)) return; visited.add(file);
+    const source = fs.readFileSync(file, "utf8");
+    expect(file).not.toMatch(/[\\/](derive|publish|normalize)[\\/]/);
+    for (const match of source.matchAll(/require\(["'](\.[^"']+)["']\)/g)) {
+      const selected = path.resolve(path.dirname(file), match[1]);
+      visit(fs.existsSync(selected + ".js") ? selected + ".js" : path.join(selected, "index.js"));
+    }
+  };
+  visit(path.join(ROOT, "packages/aura-protocol/dist/runner/index.js"));
+  for (const doc of ["SPEC.md", "MIGRATION.md", "LICENSE"]) expect(fs.existsSync(path.join(ROOT, "packages/aura-protocol/dist", doc))).toBe(true);
+  const authored = JSON.parse(fs.readFileSync(path.join(ROOT, "examples/minimal-site/authored-aura.json"), "utf8"));
+  expect(validateAuraDocument(authored).errors).toEqual([]);
+  const ci = fs.readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
+  for (const command of ["pnpm build", "pnpm test --run", "pnpm check:schemas", "pnpm check:package"]) expect(ci).toContain(command);
+  expect(ci).toContain("feat/**"); expect(ci).toContain("pull_request");
+  const help = execFileSync(process.execPath, [CLI_PATH, "--help"], { encoding: "utf8" });
+  expect(help).toContain("--config"); expect(help).toContain("derive"); expect(help).toContain("publish");
 });

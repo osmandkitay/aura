@@ -1,197 +1,62 @@
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { deriveDocument, publishDocument, validateAuraDocument, type AuraDocument } from "../../packages/aura-protocol/src";
-import { ROOT, createScenarioTempDir, readJson, removeDirectory } from "./helpers";
-
-function withTamperedId(
-  document: AuraDocument,
-  index: number,
-  tamperedId: string
-): AuraDocument {
-  return {
-    ...document,
-    actions: document.actions.map((action, actionIndex) => (actionIndex === index ? { ...action, id: tamperedId } : action))
-  };
-}
-
-describe("Scenario M - Tur 1 hardening", () => {
-  it("accepts canonical existing AURA 2.0 input with finalized ids", () => {
-    const fixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "collision-openapi.json");
-    const fixture = readJson<unknown>(fixturePath);
-    const document = deriveDocument(fixture);
-
-    expect(validateAuraDocument(document)).toMatchObject({
-      valid: true,
-      value: document
-    });
+import { deriveDocument } from "../../packages/aura-protocol/src";
+import { fixture } from "./contract-fixture";
+const selected = () => {
+  const f = fixture(); f.config.actions = [f.config.actions[1]]; delete f.config.actions[0].requires; delete f.config.actions[0].errors;
+  return f;
+};
+describe("G2 lossless supported profile", () => {
+  it("expands schema/parameter/requestBody/response refs without components or executable refs", () => {
+    const { source, config } = fixture(), result = deriveDocument(source, config);
+    expect(JSON.stringify(result.actions)).not.toMatch(/"\$(?:ref|dynamicRef)"|"components"/);
+    expect((result.actions.find(a => a.id === "create")!.input as any).properties.body.required).toEqual(["title"]);
+    expect(result.actions.find(a => a.id === "publish")!.bindings).toContainEqual({ input: "/path/id", in: "path", name: "id", style: "simple", explode: false });
+    source.paths["/unselected"] = { post: { requestBody: { $ref: "https://bad.example/never" } } };
+    expect(() => deriveDocument(source, config)).not.toThrow();
   });
-
-  it("rejects tampered finalized ids during validate, derive, and publish", () => {
-    const collisionFixturePath = path.join(ROOT, "packages", "aura-protocol", "fixtures", "collision-openapi.json");
-    const collisionDocument = deriveDocument(readJson<unknown>(collisionFixturePath));
-    const tamperedCollision = withTamperedId(collisionDocument, 0, "post.create__deadbeefcafe");
-
-    const minimalFixturePath = path.join(ROOT, "examples", "minimal-site", "source", "openapi.json");
-    const minimalDocument = deriveDocument(readJson<unknown>(minimalFixturePath));
-    const tamperedNonCollision = withTamperedId(minimalDocument, 0, "post.list__deadbeefcafe");
-
-    const scenarioRoot = createScenarioTempDir("aura-scenario-m-");
-
-    try {
-      for (const [name, document] of [
-        ["collision", tamperedCollision],
-        ["non-collision", tamperedNonCollision]
-      ] as const) {
-        const validation = validateAuraDocument(document);
-        expect(validation.valid, `${name} validation result`).toBe(false);
-        expect(validation.errors).toHaveLength(1);
-        expect(validation.errors[0]).toContain("action id is not finalized");
-
-        expect(() => deriveDocument(document)).toThrowError(/action id is not finalized/);
-        expect(() => publishDocument(document, path.join(scenarioRoot, name, "dist"))).toThrowError(/action id is not finalized/);
-      }
-    } finally {
-      removeDirectory(scenarioRoot);
-    }
+  it.each(["recursive", "remote", "dynamic", "oneOf", "anyOf", "closed-allOf"])("rejects %s with located errors", kind => {
+    const { source, config } = selected();
+    const schema: any = kind === "recursive" ? { type: "object", properties: { next: { $ref: "#/components/schemas/Draft" } } } :
+      kind === "remote" ? { $ref: "other.json#/Draft" } :
+      kind === "dynamic" ? { type: "object", $dynamicRef: "#node" } :
+      kind === "closed-allOf" ? { allOf: [{ type: "object", properties: { a: { type: "string" } }, additionalProperties: false }, { type: "object", properties: { b: { type: "string" } } }] } :
+      { [kind]: [{ type: "string" }, { type: "integer" }] };
+    source.components.schemas.Draft = schema;
+    expect(() => deriveDocument(source, config)).toThrow(/(?:REF|KEYWORD|ALLOF).*source=.*config=/);
   });
-
-  it("lets operation-level parameters override path-level parameters", () => {
-    const document = deriveDocument({
-      openapi: "3.1.0",
-      info: {
-        title: "Override Fixture",
-        version: "1.0.0"
-      },
-      paths: {
-        "/posts/{id}": {
-          parameters: [
-            {
-              name: "id",
-              in: "path",
-              required: true,
-              schema: { type: "integer" }
-            },
-            {
-              name: "lang",
-              in: "query",
-              schema: { type: "string" }
-            }
-          ],
-          get: {
-            operationId: "getPost",
-            summary: "Get a post",
-            parameters: [
-              {
-                name: "id",
-                in: "path",
-                required: true,
-                schema: {
-                  type: "string",
-                  pattern: "^[a-z0-9-]+$"
-                }
-              }
-            ],
-            responses: {
-              "200": {
-                description: "OK"
-              }
-            }
-          }
-        }
-      }
-    }).actions[0];
-
-    expect(document.entrypoint.parameterLocation).toEqual({
-      id: "path",
-      lang: "query"
-    });
-    expect(document.entrypoint.parameterMapping).toEqual({
-      id: "/id",
-      lang: "/lang"
-    });
-    expect(document.input).toEqual({
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          pattern: "^[a-z0-9-]+$"
-        },
-        lang: {
-          type: "string"
-        }
-      },
-      required: ["id"]
-    });
+  it("merges only disjoint open-object allOf and preserves nullable OAS differences", () => {
+    const { source, config } = selected();
+    source.components.schemas.Draft = { allOf: [{ type: "object", required: ["a"], properties: { a: { type: "string" } } }, { type: "object", properties: { b: { type: ["integer", "null"] } } }] };
+    const body = (deriveDocument(source, config).actions[0].input as any).properties.body;
+    expect(body).toEqual({ type: "object", required: ["a"], properties: { a: { type: "string" }, b: { type: ["integer", "null"] } } });
+    source.openapi = "3.0.3"; source.components.schemas.Draft = { type: "object", properties: { count: { type: "integer", nullable: true, minimum: 0, exclusiveMinimum: true } } };
+    expect((deriveDocument(source, config).actions[0].input as any).properties.body.properties.count).toEqual({ type: ["integer", "null"], exclusiveMinimum: 0 });
   });
-
-  it("preserves object-body schema fidelity while merging non-body parameters", () => {
-    const document = deriveDocument({
-      openapi: "3.1.0",
-      info: {
-        title: "Body Fidelity Fixture",
-        version: "1.0.0"
-      },
-      paths: {
-        "/posts": {
-          post: {
-            operationId: "publishPost",
-            summary: "Publish a post",
-            parameters: [
-              {
-                name: "draft",
-                in: "query",
-                schema: { type: "boolean" }
-              }
-            ],
-            requestBody: {
-              required: true,
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    description: "Strict publish body",
-                    additionalProperties: false,
-                    minProperties: 1,
-                    required: ["title"],
-                    properties: {
-                      title: { type: "string" }
-                    }
-                  }
-                }
-              }
-            },
-            responses: {
-              "201": {
-                description: "Created"
-              }
-            }
-          }
-        }
-      }
-    }).actions[0];
-
-    expect(document.input).toEqual({
-      type: "object",
-      description: "Strict publish body",
-      additionalProperties: false,
-      minProperties: 1,
-      required: ["title"],
-      properties: {
-        title: { type: "string" },
-        draft: { type: "boolean" }
-      }
-    });
+  it("preserves separate same-name namespaces, optional body and operation override", () => {
+    const { source, config } = selected();
+    config.actions[0].path = "/items/{id}"; config.actions[0].outputs = [];
+    source.paths["/items/{id}"] = { parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }], post: {
+      servers: [{ url: "https://api.example/v2" }], parameters: [
+        { name: "id", in: "path", required: true, schema: { type: "string" } },
+        { name: "id", in: "query", schema: { type: "integer" } },
+        { name: "id", in: "header", schema: { type: "boolean" } }],
+      requestBody: { content: { "application/json": { schema: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } } }, responses: { "204": { description: "done" } } } };
+    const action = deriveDocument(source, config).actions[0], input: any = action.input;
+    expect(action.entrypoint.url).toBe("https://api.example/v2/items/{id}");
+    expect(input.properties.path.properties.id.type).toBe("string");
+    expect(input.properties.query.properties.id.type).toBe("integer");
+    expect(input.properties.header.properties.id.type).toBe("boolean");
+    expect(input.required).toEqual(["path"]); expect(input.properties.body.required).toEqual(["id"]);
+    expect(action.bindings.map(b => b.input)).toEqual(["/header/id", "/path/id", "/query/id", "/body"]);
   });
-
-  it("rejects legacy AURA v1 input from the active 2.0 line", () => {
-    expect(() =>
-      deriveDocument({
-        protocol: "AURA",
-        version: "1.0.5",
-        site: { name: "Legacy" },
-        capabilities: {},
-        resources: {}
-      })
-    ).toThrowError("Unsupported input. Expected a local OpenAPI document or an AURA 2.0 document.");
+  it.each(["multipart", "security-or", "security-and", "cookie", "deepObject", "servers"])("rejects unsupported %s without fallback", kind => {
+    const { source, config } = selected(), op = source.paths["/posts"].post;
+    if (kind === "multipart") op.requestBody = { content: { "multipart/form-data": { schema: { type: "object" } } } };
+    if (kind === "security-or") op.security = [{}, { bearer: [] }];
+    if (kind === "security-and") op.security = [{ bearer: [], other: [] }];
+    if (kind === "cookie") op.parameters = [{ in: "cookie", name: "c", schema: { type: "string" } }];
+    if (kind === "deepObject") op.parameters = [{ in: "query", name: "c", style: "deepObject", schema: { type: "object" } }];
+    if (kind === "servers") op.servers = [{ url: "https://api.example/v1" }, { url: "https://api.example/v2" }];
+    expect(() => deriveDocument(source, config)).toThrow(/(?:MEDIA|AUTH_COMBINATION|PARAMETER|SERIALIZATION|SERVERS).*source=.*config=/);
   });
 });

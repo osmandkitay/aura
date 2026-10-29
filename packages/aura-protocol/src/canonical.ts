@@ -1,38 +1,16 @@
-function compareText(left: string, right: string): number {
-  if (left < right) {
-    return -1;
-  }
-
-  if (left > right) {
-    return 1;
-  }
-
-  return 0;
+import { createHash } from "node:crypto";
+export function revisionOf(value: unknown): string {
+  const { revision: _revision, ...content } = value as Record<string, unknown>;
+  return createHash("sha256").update(JSON.stringify(canonicalizeJsonValue(content))).digest("hex");
 }
-
-function shouldSortStringArray(pathSegments: string[], values: unknown[]): values is string[] {
-  const currentKey = pathSegments[pathSegments.length - 1];
-  return (currentKey === "aliases" || currentKey === "required") && values.every((value) => typeof value === "string");
+export function canonicalizeJsonValue(value: unknown): any {
+  if (Array.isArray(value)) return value.map(canonicalizeJsonValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== undefined)
+    .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    .map(([key, item]) => [key, canonicalizeJsonValue(item)]));
 }
-
-export function canonicalizeJsonValue(value: unknown, pathSegments: string[] = []): unknown {
-  if (Array.isArray(value)) {
-    const items = value.map((item) => canonicalizeJsonValue(item, pathSegments));
-    return shouldSortStringArray(pathSegments, items) ? [...items].sort(compareText) : items;
-  }
-
-  if (!value || typeof value !== "object") {
-    return value;
-  }
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, entryValue]) => entryValue !== undefined)
-    .sort(([left], [right]) => compareText(left, right))
-    .map(([key, entryValue]) => [key, canonicalizeJsonValue(entryValue, [...pathSegments, key])]);
-
-  return Object.fromEntries(entries);
-}
-
 export function stableStringify(value: unknown): string {
-  return `${JSON.stringify(canonicalizeJsonValue(value), null, 2)}\n`;
+  return JSON.stringify(canonicalizeJsonValue(value), null, 2) + "\n";
 }

@@ -1,126 +1,67 @@
 import fs from "node:fs";
 import path from "node:path";
-import { AURA_ACTION_SCHEMA_URL, AURA_PUBLISH_SCHEMA_URL } from "../constants";
-import { ensureDirectory, readJsonFile, writeJsonFile } from "../filesystem";
+import { stableStringify } from "../canonical";
+import { readJsonFile } from "../filesystem";
 import { AuraDocument, PublishedAuraAction, PublishedAuraIndex } from "../schema/types";
 import { deriveDocument } from "../derive";
-import { canonicalizeDocument } from "../derive/shared";
 import { validateAuraDocument, validatePublishedAction, validatePublishedIndex } from "../validate";
+import { toPublishedAction, toPublishedIndex, assertSummary } from "../surface";
+export { toPublishedAction, toPublishedIndex, assertSummary } from "../surface";
 
-export interface PublishResult {
-  derived: AuraDocument;
-  index: PublishedAuraIndex;
-  indexPath: string;
-  actionPaths: string[];
-}
-
-function actionHref(actionId: string): string {
-  return `/.well-known/aura/actions/${actionId}.json`;
-}
-
-function toPublishedAction(action: AuraDocument["actions"][number]): PublishedAuraAction {
-  return {
-    $schema: AURA_ACTION_SCHEMA_URL,
-    ...action
-  };
-}
-
-function toPublishedIndex(document: AuraDocument): PublishedAuraIndex {
-  return {
-    $schema: AURA_PUBLISH_SCHEMA_URL,
-    protocol: document.protocol,
-    version: document.version,
-    site: document.site,
-    actions: document.actions.map((action) => ({
-      id: action.id,
-      key: action.key,
-      title: action.title,
-      intent: action.intent,
-      href: actionHref(action.id),
-      docsHref: action.docs?.href,
-      auth: action.auth,
-      confirm: action.confirm,
-      risk: action.risk
-    }))
-  };
-}
-
-function assertPublishedSurfaceIntegrity(outputRoot: string, index: PublishedAuraIndex, publishedActions: PublishedAuraAction[]): void {
-  const actionsById = new Map(publishedActions.map((action) => [action.id, action]));
-
+export interface PublishResult { derived: AuraDocument; index: PublishedAuraIndex; indexPath: string; actionPaths: string[] }
+export function validatePublication(indexPath: string): void {
+  const index = readJsonFile<PublishedAuraIndex>(indexPath), validation = validatePublishedIndex(index);
+  if (!validation.valid) throw new Error(validation.errors.join("\n"));
   for (const summary of index.actions) {
-    const linkedPath = path.join(outputRoot, ...summary.href.split("/").filter(Boolean));
-    if (!fs.existsSync(linkedPath)) {
-      throw new Error(`Published index points at a missing action detail file: ${summary.href}`);
-    }
-
-    const detail = actionsById.get(summary.id);
-    if (!detail) {
-      throw new Error(`Published index refers to an unknown action id: ${summary.id}`);
-    }
-
-    if (summary.href !== actionHref(detail.id)) {
-      throw new Error(`Published index href drifted from the action id for ${summary.id}.`);
-    }
-
-    if (summary.key !== detail.key || summary.title !== detail.title) {
-      throw new Error(`Published index summary drifted from the action detail for ${summary.id}.`);
-    }
-
-    if (summary.intent.domain !== detail.intent.domain || summary.intent.verb !== detail.intent.verb) {
-      throw new Error(`Published index intent drifted from the action detail for ${summary.id}.`);
-    }
+    const detail = readJsonFile<PublishedAuraAction>(path.resolve(path.dirname(indexPath), summary.href));
+    const result = validatePublishedAction(detail);
+    if (!result.valid) throw new Error(result.errors.join("\n"));
+    assertSummary(index, detail);
   }
 }
-
 export function publishDocument(document: AuraDocument, outDirectory: string): PublishResult {
-  const canonicalDocument = canonicalizeDocument(document);
-  const validatedDocument = validateAuraDocument(canonicalDocument);
-  if (!validatedDocument.valid) {
-    throw new Error(`AURA 2.0 document failed validation:\n${validatedDocument.errors.join("\n")}`);
-  }
-
-  const outputRoot = path.resolve(outDirectory);
-  const wellKnownDirectory = path.join(outputRoot, ".well-known");
-  const actionsDirectory = path.join(wellKnownDirectory, "aura", "actions");
-  ensureDirectory(actionsDirectory);
-
-  const actionPaths: string[] = [];
-  const publishedActions: PublishedAuraAction[] = [];
-  for (const action of canonicalDocument.actions) {
-    const publishedAction = toPublishedAction(action);
-    const actionValidation = validatePublishedAction(publishedAction);
-    if (!actionValidation.valid) {
-      throw new Error(`Action ${action.key} failed validation:\n${actionValidation.errors.join("\n")}`);
+  const validation = validateAuraDocument(document);
+  if (!validation.valid) throw new Error("Invalid AURA document:\n" + validation.errors.join("\n"));
+  const root = path.resolve(outDirectory), indexPath = path.join(root, ".well-known", "aura.json");
+  fs.mkdirSync(root, { recursive: true });
+  const stage = fs.mkdtempSync(path.join(root, ".aura-stage-"));
+  const index = toPublishedIndex(document), files = new Map<string, string>();
+  const actionPaths = index.actions.map(a => path.resolve(path.dirname(indexPath), a.href));
+  document.actions.forEach((a, i) => files.set(actionPaths[i], stableStringify(toPublishedAction(document, a))));
+  files.set(indexPath, stableStringify(index)); // Descriptor is committed last.
+  const oldFiles = new Set<string>();
+  const backup = new Map<string, Buffer | null>();
+  try {
+    if (fs.existsSync(indexPath)) {
+      validatePublication(indexPath);
+      const old = readJsonFile<PublishedAuraIndex>(indexPath);
+      oldFiles.add(indexPath);
+      old.actions.forEach(a => oldFiles.add(path.resolve(path.dirname(indexPath), a.href)));
     }
-
-    const filePath = path.join(actionsDirectory, `${action.id}.json`);
-    writeJsonFile(filePath, publishedAction);
-    actionPaths.push(filePath);
-    publishedActions.push(publishedAction);
-  }
-
-  const index = toPublishedIndex(canonicalDocument);
-  const indexValidation = validatePublishedIndex(index);
-  if (!indexValidation.valid) {
-    throw new Error(`Published index failed validation:\n${indexValidation.errors.join("\n")}`);
-  }
-
-  const indexPath = path.join(wellKnownDirectory, "aura.json");
-  writeJsonFile(indexPath, index);
-
-  assertPublishedSurfaceIntegrity(outputRoot, index, publishedActions);
-
-  return {
-    derived: canonicalDocument,
-    index,
-    indexPath,
-    actionPaths
-  };
+    for (const [destination, bytes] of files) {
+      if (fs.existsSync(destination) && !oldFiles.has(destination)) throw new Error("UNOWNED_PATH: refusing to replace " + path.relative(root, destination));
+      const relative = path.relative(root, destination);
+      const staged = path.join(stage, relative);
+      fs.mkdirSync(path.dirname(staged), { recursive: true }); fs.writeFileSync(staged, bytes);
+    }
+    validatePublication(path.join(stage, ".well-known", "aura.json"));
+    for (const destination of new Set([...files.keys(), ...oldFiles])) {
+      backup.set(destination, fs.existsSync(destination) ? fs.readFileSync(destination) : null);
+    }
+    for (const destination of files.keys()) {
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.copyFileSync(path.join(stage, path.relative(root, destination)), destination);
+    }
+    for (const destination of oldFiles) if (!files.has(destination)) fs.unlinkSync(destination);
+  } catch (error) {
+    for (const [destination, bytes] of backup) {
+      if (bytes === null) { if (fs.existsSync(destination)) fs.unlinkSync(destination); }
+      else fs.writeFileSync(destination, bytes);
+    }
+    throw error;
+  } finally { fs.rmSync(stage, { recursive: true, force: true }); }
+  return { derived: document, index, indexPath, actionPaths };
 }
-
 export function publishFile(inputPath: string, outDirectory: string): PublishResult {
-  const source = readJsonFile<unknown>(inputPath);
-  const derived = deriveDocument(source);
-  return publishDocument(derived, outDirectory);
+  return publishDocument(deriveDocument(readJsonFile(inputPath)), outDirectory);
 }

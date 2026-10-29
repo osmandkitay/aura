@@ -1,9 +1,20 @@
 # AURA v1 to v2 Core Refactor Plan
 
+## Alpha.1 to alpha.2 breaking changes
+
+The active contract is `docs/spec/aura-v2-core.md`; the remainder is historical.
+Alpha.2 removes inferred intent/confidence, risk/confirmation and collision ids.
+Supply explicit id/key/risk in config; preserve old locators by declaring them
+verbatim. Input uses path/query/header/body namespaces and separate bindings.
+L1 has short signatures and relative hrefs; L2 has explicit API URLs, success
+cases and outputs. All files share a revision. Plans use step ids and from
+records. State has a v2 prefix and base64url payload. Old inputs are rejected,
+not silently migrated. The small runner is in scope; demo stacks remain out.
+
 This note is a historical rewrite log, not the current 2.0 support contract.
 It freezes the repo's starting point before the AURA 2.0 core rewrite and records the transition period when v1 migration still existed in-tree.
 
-## Current 2.0 truth
+## Historical alpha.1 truth
 
 - AURA 2.0 is the mainline derive/publish story in this repo.
 - Earlier manifest formats are part of AURA history, not part of the active 2.0 core release line.

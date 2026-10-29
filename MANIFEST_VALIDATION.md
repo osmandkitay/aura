@@ -1,39 +1,26 @@
-# AURA Validation
+# Validation
 
-This repo validates two AURA 2.0 artifacts:
+`aura-protocol validate <file>` and `aura-validate <file>` support alpha.2
+config, normal form, L1, L2, plan and decoded State shapes. Schemas are bundled
+and loaded relative to the installed module, without a working-directory or
+network fallback.
 
-- a full derived document
-- a published action index under `/.well-known/aura.json`
+File APIs return `ValidationResult` (valid/errors/target/schemaPath).
+Normal-form validation additionally checks content revision, unique stable ids,
+canonical action order, executable binding coverage, output/response type
+compatibility, supported mechanics and local requires/resolver references.
+L2 validation checks its self-contained mechanics. L1 file validation checks
+shape/ids/relative hrefs; the CLI and `validatePublication(indexPath)` also
+read every linked detail and check signatures, provenance and revisions.
 
-## Repo-local CLI
+`preparePlan` validates the schema plus known actions, unique step ids,
+backward output references, types, input assignment conflicts and known required/
+literal inputs before API calls. Runtime validates actual inputs and response
+values; static checking cannot prove future network behavior.
 
-```bash
-pnpm build
-node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/source/openapi.json
-node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/.derived/aura-v2.json
-node packages/aura-protocol/dist/cli/aura-protocol.js publish examples/minimal-site/.derived/aura-v2.json --out examples/minimal-site/dist
-node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/dist/.well-known/aura.json
-```
-
-Use the repo-local CLI here.
-The generated `.derived/` and `dist/` output is local and ignored.
-The matching 2.0 package line is not assumed to be published yet.
-
-## Schemas
-
-- `packages/aura-protocol/schema/aura-v2.schema.json`
-- `packages/aura-protocol/schema/aura-action.schema.json`
-- `packages/aura-protocol/schema/aura-publish.schema.json`
-
-## What validation checks
-
-- the action-first document shape
-- semantic key and action id format
-- publish index shape
-- per-action detail file shape
-
-## What validation does not do
-
-- crawl remote sites
-- infer missing auth flows
-- prove server behavior matches the action surface
+`pnpm check:schemas` checks generated schemas for source/version drift.
+`pnpm check:package` compares source/packed bytes and independently validates
+installed artifacts with Ajv in a clean directory. `node scripts/check-package.mjs
+--remote` additionally requires public version-pinned URLs to return matching
+bytes; the new tag must be released first. It fails if the tag is absent.
+No schema validation proves a publisher's intent/risk claim or API authority.

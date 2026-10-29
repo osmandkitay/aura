@@ -1,86 +1,130 @@
 # AURA
 
-Agent-Usable Resource Assertion.
-This repo is the small AURA 2.0 core for deriving, validating, and publishing the machine-actionable surface of a site from local machine-readable inputs.
-AURA 2.0 is the mainline.
-It keeps semantic action keys clean and publishes durable action locators for the open web.
-It is a small open compiler, not a hosted product or framework.
+Agent-Usable Resource Assertion: explicit, self-contained HTTP action recipes.
+A publisher declares intent and risk; a small compiler prepares the mechanics.
+A consumer selects a complete plan; a deterministic runner performs its HTTP
+calls and transfers selected outputs without intermediate model calls.
 
-The repo stays a one-package workspace on purpose: the releasable core lives in `packages/aura-protocol`, while docs, examples, and scenario tests stay at the root.
+This is a one-package workspace. The active implementation branch is
+`feat/aura-declarative-runner`, based on `aura-core-v2` at `ba534d1`.
+The incompatible profile is `2.0.0-alpha.2`. Use the local build or a verified
+tarball until its corresponding release is available. The public schema and npm
+release gates are distinct; see [current verification status](docs/implementation.md).
+The old alpha.1 tag is preserved.
 
-## Consume Published AURA
+## Build and publish
 
-Consumers do not need this repo or package.
-If a site publishes AURA, fetch `/.well-known/aura.json` and the linked action detail files directly from the web.
-
-## Contributor Flow In This Repo
-
-On March 13, 2026, npm still exposes only the `aura-protocol` 1.x line (`1.0.0` through `1.0.5`).
-That means plain `npx aura-protocol` does not yet match this repo's `2.0.0-alpha.1` source state.
-
-For this repo state, build and run the local CLI:
+Prerequisites: Node.js >=20.19, pnpm 10.7.1, an existing HTTP API with known auth,
+and prepared local OpenAPI 3.0/3.1 JSON plus explicit declaration. The five-minute
+setup target starts with that API/source/config ready; it excludes API creation,
+auth discovery and authoring a correct recipe. Static files do not create APIs.
 
 ```bash
 pnpm install
 pnpm build
 
-node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/source/openapi.json
+node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/source/openapi.json --config examples/minimal-site/aura.config.json
 node packages/aura-protocol/dist/cli/aura-protocol.js publish examples/minimal-site/.derived/aura-v2.json --out examples/minimal-site/dist
 node packages/aura-protocol/dist/cli/aura-protocol.js validate examples/minimal-site/dist/.well-known/aura.json
 ```
 
-`derive` writes a sibling `.derived/aura-v2.json` by default.
-`publish` writes `dist/.well-known/aura.json` plus one detail file per action under `dist/.well-known/aura/actions/`.
-Source inputs are finalized by the core during derive.
-Existing AURA 2.0 input is accepted only if its `actions[]` order and `id` values already match the core's canonical finalized result; `publish` preserves that truth and does not rescue malformed documents.
-Generated `.derived/` and `dist/` output is local and ignored.
+`derive` writes a sibling `.derived/aura-v2.json` (or `--out <file>` /
+`--stdout`). `publish` accepts a validated normal-form document, never raw
+OpenAPI without its declaration. It writes exactly one discovery entry at
+`/.well-known/aura.json` and individual `aura/actions/{id}.json` details.
+Generated output is ignored by Git.
 
-When a 2.0 package release exists, pin the exact version instead of relying on an unpinned `latest` tag:
+The second input route is a fully declared, self-contained AURA document:
 
 ```bash
-npx aura-protocol@2.0.0-alpha.1 derive <input>
-npx aura-protocol@2.0.0-alpha.1 publish <derived-aura-v2.json> --out <dir>
+node packages/aura-protocol/dist/cli/aura-protocol.js derive examples/minimal-site/authored-aura.json --out examples/minimal-site/.derived/authored.json
 ```
 
-Those exact-version commands are the intended package story, but they are not valid on npm yet in this repo state.
+The compiler treats human and agent authors identically. A declaration requires
+publisher/source/version, an explicit API target, stable id, key and risk per
+selected action. Missing information is an error, never an intent/confidence
+guess. Equal keys can have different signatures; consumers choose action ids.
 
-## Supported Inputs Today
+## Consume static recipes
 
-- local OpenAPI JSON
-- existing local AURA 2.0 JSON that already uses canonical finalized action order and canonical finalized IDs
+Consumers do not need this repo or package. Any implementation of the profile
+can fetch the descriptor and only its selected details. Relative links resolve
+at the artifact host; action HTTP URLs point at the separately declared API.
+The same package can live at the site's well-known URL, a third-party static
+subdirectory or a Git raw URL. Publisher role and source version remain visible;
+third-party recipes do not become site-owner assertions.
 
-## What This Repo Does
+The optional reference runner ships in the same package:
 
-- derives an action-first AURA 2.0 document
-- keeps semantic `key` separate from stable locator `id`
-- publishes colliding actions through `key__<hash>` locators derived from source identity facts, not renumbered suffixes
-- preserves portable provenance in `aliases` and `origin`
-- omits local repo file paths such as `source.file` and `origin.file` from default derived and published artifacts
-- validates derived and published artifacts with JSON Schema
-- enforces canonical finalized action order and canonical finalized IDs for existing AURA 2.0 input instead of silently repairing them
-- publishes a small well-known index and per-action detail files
-- writes deterministic, human-readable JSON artifacts for clean diffs
+```bash
+node packages/aura-protocol/dist/cli/aura-runner.js plan.json --timeout-ms 10000
+```
 
-## What This Repo Does Not Do
+A plan explicitly supplies the descriptor URL, unique step ids, action ids and
+literal/from assignments. The static [example plan](examples/minimal-site/plan.json)
+describes an assumed API; provide the actual descriptor and caller inputs before
+running it. Run the scenarios below for a real local HTTP fixture.
 
-- it does not crawl the web
-- it does not automate browsers
-- it does not host a bridge, index, or signing service
-- it does not ship a demo server or demo client
-- it does not add remote runtimes or placeholder extension systems
+`aura-protocol/runner` is the separate package API entry for `runPlan`,
+`preparePlan`, `executePlan`, `buildRequest`, projection and State helpers.
+Preflight validates all referenced details and data dependencies before any API
+call. A prepared plan can be reused while the caller intentionally trusts its
+pinned snapshot. No source OpenAPI or compiler modules enter the runner.
 
-## Historical Note
+Model-visible results contain selected outputs and short status/action/revision
+information. Credential outputs transfer only inside the run. Timeout or
+connection loss can mean `outcome-unknown`; previous completions remain visible.
+There is no retry, rollback or automatic resolver invocation. State is optional,
+response-scoped context; HTTP and target authorization remain authoritative.
 
-Earlier manifest formats are part of AURA history, not part of the active 2.0 core contract.
-The original rewrite log is kept in `docs/migration/v1-to-v2-plan.md`.
+## Supported profile and limits
 
-## Docs
+Acyclic same-document refs, namespaced path/query/header/body inputs, JSON body
+and response, exact success statuses and no-content success, typed RFC 6901
+outputs, scalar/simple parameters and repeated form query arrays are supported.
+Auth supports anonymous, one bearer, or one header API key. The bearer prefix
+and API key header are explicit. Unsupported combinations fail with locations.
 
-- `docs/spec/aura-v2-core.md`
-- `docs/rationale/semantic-normalization.md`
-- `docs/rationale/architecture-seams.md`
-- `docs/migration/v1-to-v2-plan.md`
+No remote/recursive/dynamic refs, general oneOf/anyOf, unsafe closed-object
+allOf, multipart/forms, cookies/CSRF/OAuth interaction, or ambiguous server/auth
+alternatives. Maximum schema depth 64, expansion 10,000 schema nodes per schema,
+action 1 MiB, State wire header 4096 bytes; nested array assignment indices are
+limited to 10,000. See [the exact contract and keywords](docs/spec/aura-v2-core.md).
 
-## License
+The core stays small: it does not crawl the web; it does not automate browsers;
+it does not host a bridge, index, or signing service. No demo app/server/client
+stack, planner, scheduler, registry or database is included. General agent
+products need profile support; universal integration or error-free APIs are not
+promised. A shared key is not a shared type, unit or authority guarantee.
 
-MIT
+## Verify
+
+```bash
+pnpm install
+pnpm build
+pnpm test --run
+pnpm check:schemas
+pnpm check:package
+```
+
+Packaging installs `npm pack` output outside this repository, runs all three
+CLIs, compares bundled schema bytes and checks independent Ajv validation with
+no working-directory fallback. After the new tag is publicly released, the
+additional release gate is:
+
+```bash
+node scripts/check-package.mjs --remote
+```
+
+That gate requires each public schema URL to return exactly the packaged bytes.
+A missing public tag is a failed release gate, not a successful local fallback.
+Exact-version npm commands become valid only after the corresponding package is
+published; no command assumes that alpha.2 is already in the registry.
+
+[Acceptance evidence and limitations](docs/implementation.md),
+[measured results](docs/measurements/README.md),
+[contract](docs/spec/aura-v2-core.md),
+[architecture](docs/rationale/architecture-seams.md),
+[semantics](docs/rationale/semantic-normalization.md),
+[migration](docs/migration/v1-to-v2-plan.md).
+MIT.

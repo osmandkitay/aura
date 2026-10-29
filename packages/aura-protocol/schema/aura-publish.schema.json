@@ -1,14 +1,22 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-publish.schema.json",
-  "title": "AURA 2.0 Published Index",
-  "description": "Small published action index written to /.well-known/aura.json.",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-publish.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "protocol", "version", "site", "actions"],
+  "required": [
+    "$schema",
+    "protocol",
+    "version",
+    "profile",
+    "revision",
+    "publisher",
+    "source",
+    "target",
+    "actions"
+  ],
   "properties": {
     "$schema": {
-      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.1/packages/aura-protocol/schema/aura-publish.schema.json"
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.2/packages/aura-protocol/schema/aura-publish.schema.json"
     },
     "protocol": {
       "const": "AURA"
@@ -16,10 +24,21 @@
     "version": {
       "const": "2.0"
     },
-    "site": {
+    "profile": {
+      "const": "2.0.0-alpha.2"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "publisher": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name"],
+      "required": [
+        "name",
+        "url",
+        "role"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -27,77 +46,206 @@
         },
         "url": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "^https?://"
         },
-        "description": {
-          "type": "string"
+        "role": {
+          "enum": [
+            "site-owner",
+            "third-party"
+          ]
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "url",
+        "version"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "openapi",
+            "aura-v2"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^https?://"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^https?://"
         }
       }
     },
     "actions": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "key", "title", "intent", "href"],
+        "required": [
+          "id",
+          "key",
+          "href",
+          "inputs",
+          "outputs"
+        ],
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+(?:__[a-f0-9]{12,64})?$"
+            "minLength": 1,
+            "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
           },
           "key": {
             "type": "string",
+            "minLength": 1,
             "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)+$"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1
-          },
-          "intent": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["domain", "verb"],
-            "properties": {
-              "domain": {
-                "type": "string",
-                "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
-              },
-              "verb": {
-                "type": "string",
-                "pattern": "^[a-z0-9]+(?:\\.[a-z0-9]+)*$"
-              }
-            }
           },
           "href": {
             "type": "string",
-            "pattern": "^/.+\\.json$"
+            "pattern": "^aura/actions/[A-Za-z0-9._-]+\\.json$"
           },
-          "docsHref": {
-            "type": "string",
-            "pattern": "^/.+"
-          },
-          "auth": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["kind"],
-            "properties": {
-              "kind": {
-                "enum": ["none", "cookie", "bearer", "api-key", "oauth2", "unknown"]
-              },
-              "required": {
-                "type": "boolean"
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "type",
+                "required"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "oneOf": [
+                    {
+                      "enum": [
+                        "object",
+                        "array",
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "uniqueItems": true,
+                      "contains": {
+                        "const": "null"
+                      },
+                      "items": {
+                        "enum": [
+                          "object",
+                          "array",
+                          "string",
+                          "number",
+                          "integer",
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                }
               }
             }
           },
-          "confirm": {
-            "enum": ["never", "suggested", "required"]
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "type",
+                "required"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "oneOf": [
+                    {
+                      "enum": [
+                        "object",
+                        "array",
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "uniqueItems": true,
+                      "contains": {
+                        "const": "null"
+                      },
+                      "items": {
+                        "enum": [
+                          "object",
+                          "array",
+                          "string",
+                          "number",
+                          "integer",
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              }
+            }
           },
-          "risk": {
-            "enum": ["low", "medium", "high"]
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
+            },
+            "uniqueItems": true
           }
         }
-      }
+      },
+      "minItems": 1
     }
   }
 }

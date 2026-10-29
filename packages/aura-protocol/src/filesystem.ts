@@ -13,8 +13,7 @@ export function readJsonFile<T>(filePath: string): T {
   try {
     return JSON.parse(source) as T;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown JSON parse failure";
-    throw new Error(`Could not parse JSON from ${absolutePath}: ${message}`);
+    throw new Error(`JSON_PARSE: Could not parse JSON from ${absolutePath}`);
   }
 }
 

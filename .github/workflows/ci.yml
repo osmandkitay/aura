@@ -2,28 +2,31 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, aura-core-v2, 'feat/**' ]
+    tags: [ 'v2.0.0-alpha.*' ]
   pull_request:
-    branches: [ main, master ]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: pnpm
-
     - name: Setup pnpm
       uses: pnpm/action-setup@v2
       with:
         version: 10.7.1
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
@@ -33,3 +36,13 @@ jobs:
 
     - name: Test
       run: pnpm test --run
+
+    - name: Schema consistency
+      run: pnpm check:schemas
+
+    - name: Isolated npm archive
+      run: pnpm check:package
+
+    - name: Public immutable schema bytes (release gate)
+      if: startsWith(github.ref, 'refs/tags/v2.0.0-alpha.')
+      run: node scripts/check-package.mjs --remote

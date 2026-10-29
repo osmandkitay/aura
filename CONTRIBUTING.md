@@ -11,6 +11,7 @@ Prefer changes that improve the AURA core:
 - small well-known publish surfaces
 - validation quality
 - scenario-first tests
+- the explicitly scoped linear runner, without compiler imports or recovery engines
 - honest documentation
 
 Do not add:
@@ -28,6 +29,8 @@ Do not add:
 pnpm install
 pnpm build
 pnpm test --run
+pnpm check:schemas
+pnpm check:package
 ```
 
 ## Standards
