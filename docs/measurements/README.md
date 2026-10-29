@@ -74,16 +74,16 @@ measurements silently removed from an API benchmark.
 
 ## Clean-directory quickstart and package
 
-The archived package has 57 files, 41678 compressed bytes and
-185884 unpacked bytes. It was installed into a new temporary directory
+The archived package has 57 files, 41668 compressed bytes and
+185879 unpacked bytes. It was installed into a new temporary directory
 outside the repository; existing npm cache/network conditions still apply.
 
 | Step | Measured ms |
 | --- | --- |
-| Install archive and dependencies | 2379.54 |
-| First derive → publish → validate | 1146.88 |
-| First installed-runner consumption | 405.98 |
-| Entire archive check | 5700.53 |
+| Install archive and dependencies | 1315.57 |
+| First derive → publish → validate | 800.58 |
+| First installed-runner consumption | 384.47 |
+| Entire archive check | 4753.11 |
 
 The start condition is an existing API and prepared source/declaration; API
 implementation and recipe discovery are excluded. All three installed CLI entry
@@ -103,5 +103,8 @@ Remove-Item Env:AURA_RECORD_MEASUREMENTS
 pnpm check:package -- --record
 ```
 
-The public schema URL gate is separate: `node scripts/check-package.mjs --remote`.
-It currently fails with HTTP 404 until the new immutable schema tag is published.
+The public schema URL gate also passed after the approved publication of the
+immutable `v2.0.0-alpha.2` tag: all six public URLs exactly match the packaged
+schemas. The final package timing above includes those six public GETs.
+[Tag CI](https://github.com/osmandkitay/aura/actions/runs/40802809571) independently
+passed the same gate on Windows and Linux.

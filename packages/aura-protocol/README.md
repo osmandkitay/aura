@@ -14,8 +14,8 @@ are separate provenance claims. The API enforces actual authority.
 ## Local build and package truth
 
 Build from the implementation branch with `pnpm install && pnpm build`.
-The new npm version and schema tag are not assumed publicly available yet.
-Use a locally packed tarball until release. After an exact-version release,
+Schemas are public at the immutable Git tag `v2.0.0-alpha.2`.
+Use a locally packed tarball until its npm release. After an exact-version release,
 install `aura-protocol@2.0.0-alpha.2`; avoid an unpinned latest tag.
 
 ```bash
