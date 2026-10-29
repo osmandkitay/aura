@@ -1,27 +1,40 @@
-# Alpha.3 release preparation (2026-10-29)
+# Alpha.3 release status (2026-10-29)
 
-Release preparation starts from reviewed commit `a25ea33ec76d992b34935eebe53b73d93f2fce66`.
-The remote implementation branch still points there. Its [CI run](https://github.com/osmandkitay/aura/actions/runs/40810648388)
-passed Linux and Windows install, build, scenario tests, schema consistency and
-isolated archive checks. That evidence is reused for unchanged product code.
-Only release-status documentation changes in this preparation.
+[PR #7](https://github.com/osmandkitay/aura/pull/7) is merged into `master` at
+`803b5e94263b4dcf9a00c066bb486ea6181f5d8b`. Its tree exactly matches release commit
+`2b676e8ad78d04c3dc16157625f4f410d99d4886`. The immutable annotated
+`v2.0.0-alpha.3` tag still peels to that release commit; its tag object is
+`54280f18ead058441f83adfe537d8eed0175f5e8`. All pre-existing Git tags are preserved.
 
-Registry inspection found versions 1.0.0 through 1.0.5, `latest=1.0.5`, no alpha
-dist-tag and no alpha.3 release. Remote alpha.1/alpha.2 tags are preserved.
+[Release tag CI](https://github.com/osmandkitay/aura/actions/runs/40907581907)
+passed on Linux and Windows: locked dependency installation, build, 83 scenario
+tests in 17 files, schema consistency, isolated archive installation and all six
+public immutable schema byte comparisons. This successful release evidence is
+reused for unchanged product code. The retained archive itself also passed the
+isolated package checker, all three CLIs and public schema comparisons, as
+recorded in PR #7.
+
+The retained `aura-protocol-2.0.0-alpha.3.tgz` is 37,823 bytes with 59 files.
+Fresh SHA-512 and SHA-1 calculations match both `pack.json` and PR #7 evidence:
+
+```text
+integrity: sha512-Ik3MZ+WfTXSAO4R3kiCTofl+3XMaCrp3tDChiOTuVHkj0BJ4cBJ5GOppyKbbEtzX2Cjx8mO/78XFytObdfTjLg==
+shasum: 2e70da11e80c7b919739e87bfb285e30814476c5
+```
+
+`npm whoami` now returns `dervisofai`; `npm access list collaborators aura-protocol
+--json` reports `read-write` for that identity. The exact retained archive was
+submitted with `--tag alpha --access public`, but npm rejected publication with
+E403: two-factor authentication or a granular access token with bypass 2FA is
+required. Subsequent registry inspection confirms alpha.3 is absent, there is no
+alpha dist-tag, and `latest=1.0.5` is unchanged. Interactive publisher authorization
+is the remaining publication blocker. Registry integrity and an exact-version
+registry installation outside the repository remain pending until publication.
+
 Workspace/package versions, profile constants/types, six generated schemas and
-examples already agree on 2.0.0-alpha.3; the lockfile has no workspace version
-entry to update. `task.md` remains ignored and untracked; generated output is
-excluded from commits.
-
-Npm publication is blocked: `npm whoami` and `npm access list packages --json`
-return E401 Unauthorized. No registry upload has been attempted. After the exact
-release commit is built and its archive independently installed, the new
-annotated tag must pass Linux/Windows CI and all six public schema URLs must
-match the packaged bytes. The PR records the final commit, archive integrity,
-tag and gate evidence. Publish that verified archive with `--tag alpha` only
-after those gates and authenticated package write access; preserve `latest`.
-Registry integrity and installation outside the repository remain pending until
-publication succeeds. Historical alpha.2 measurements are not alpha.3 benchmarks.
+examples agree on 2.0.0-alpha.3; the lockfile has no workspace version entry to
+update. `task.md` remains ignored and untracked; generated output is excluded from
+commits. Historical alpha.2 measurements are not alpha.3 benchmarks.
 
 ## Previous implementation review and verification
 
@@ -157,7 +170,7 @@ No interactive OAuth/cookie/CSRF, variants, retry/rollback, job engine or model
 planner is claimed. Publication rollback covers synchronous local errors, not
 process crashes or CDN atomic deployment. Revision is not publisher identity.
 
-## Public schema release verified
+## Historical alpha.2 public schema release verified
 
 The first `node scripts/check-package.mjs --remote` run failed with HTTP **404**
 because the new tag did not exist. After explicit user approval, the branch and

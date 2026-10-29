@@ -5,13 +5,13 @@ A publisher declares intent and risk; a small compiler prepares the mechanics.
 A consumer selects a complete plan; a deterministic runner performs its HTTP
 calls and transfers selected outputs without intermediate model calls.
 
-This is a one-package workspace. The active implementation branch is
-`feat/aura-declarative-runner`, based on `aura-core-v2` at `ba534d1`.
-The incompatible profile is `2.0.0-alpha.3`. Use the local build or a verified
-tarball until its corresponding release is available. The public schema and npm
-release gates are distinct; see [current verification status](docs/implementation.md).
-Existing alpha.1/alpha.2 tags are preserved. Alpha.3 npm publication is pending
-authenticated publisher access; Git tag/schema verification is a separate gate.
+This is a one-package workspace on `master`, following the merge of PR #7.
+The incompatible profile is `2.0.0-alpha.3`. Its immutable Git tag, public schema
+bytes and Linux/Windows release CI are verified. Npm identity and package write
+access are verified; publication still requires interactive 2FA authorization.
+Use the local build or retained verified tarball until that registry gate passes.
+See [current verification status](docs/implementation.md). Existing Git tags and
+the npm `latest=1.0.5` dist-tag are preserved.
 
 ## Build and publish
 

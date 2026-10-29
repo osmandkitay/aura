@@ -7,7 +7,8 @@ Use a clean publish directory when changing profiles; an old-profile descriptor
 does not establish ownership of files for the current publisher.
 Existing release tags are immutable. Public schema commands require the new
 alpha.3 tag and verified schema bytes; npm install commands require the separate
-registry publication, currently pending authenticated publisher access.
+registry publication, currently pending interactive 2FA authorization after
+successful identity and package write-access checks.
 
 ## Changes from alpha.2
 
