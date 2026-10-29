@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-config.schema.json",
+  "publisher": {
+    "name": "Recipe author",
+    "url": "https://recipes.example",
+    "role": "third-party"
+  },
+  "source": {
+    "url": "https://api.example/openapi.json",
+    "version": "1"
+  },
+  "target": {
+    "url": "https://api.example/v1"
+  },
+  "actions": [
+    {
+      "id": "login",
+      "key": "session.login",
+      "risk": "low",
+      "method": "POST",
+      "path": "/login",
+      "outputs": [
+        {
+          "name": "token",
+          "source": "body",
+          "pointer": "/token",
+          "type": "string",
+          "required": true,
+          "visibility": "credential"
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "key": "post.create",
+      "risk": "medium",
+      "method": "POST",
+      "path": "/posts",
+      "requires": [
+        "login"
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "reason": "authentication-required",
+          "resolve": "login"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "created_id",
+          "source": "body",
+          "pointer": "/id",
+          "type": "string",
+          "required": true,
+          "visibility": "model"
+        }
+      ]
+    },
+    {
+      "id": "publish",
+      "key": "post.publish",
+      "risk": "high",
+      "method": "POST",
+      "path": "/posts/{id}/publish",
+      "outputs": [],
+      "errors": [
+        {
+          "status": 403,
+          "reason": "not-authorized"
+        },
+        {
+          "status": 429,
+          "reason": "rate-limited"
+        }
+      ]
+    },
+    {
+      "id": "list",
+      "key": "post.list",
+      "risk": "low",
+      "method": "GET",
+      "path": "/posts",
+      "outputs": []
+    }
+  ]
+}

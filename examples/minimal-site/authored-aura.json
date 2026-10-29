@@ -1,0 +1,356 @@
+{
+  "$schema": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-v2.schema.json",
+  "actions": [
+    {
+      "aliases": [
+        "POST /posts",
+        "create"
+      ],
+      "auth": {
+        "input": "/header/Authorization",
+        "kind": "bearer",
+        "name": "Authorization"
+      },
+      "bindings": [
+        {
+          "in": "body",
+          "input": "/body",
+          "target": ""
+        },
+        {
+          "explode": false,
+          "in": "header",
+          "input": "/header/Authorization",
+          "name": "Authorization",
+          "prefix": "Bearer ",
+          "style": "simple"
+        }
+      ],
+      "entrypoint": {
+        "encoding": "json",
+        "method": "POST",
+        "url": "https://api.example/v1/posts"
+      },
+      "errors": [
+        {
+          "reason": "authentication-required",
+          "resolve": "login",
+          "status": 401
+        }
+      ],
+      "id": "create",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "type": "object"
+          },
+          "header": {
+            "additionalProperties": false,
+            "properties": {
+              "Authorization": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "Authorization"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "body",
+          "header"
+        ],
+        "type": "object"
+      },
+      "key": "post.create",
+      "origin": {
+        "ref": "/actions/create",
+        "source": "aura-v2"
+      },
+      "outputs": [
+        {
+          "name": "created_id",
+          "pointer": "/id",
+          "required": true,
+          "source": "body",
+          "type": "string",
+          "visibility": "model"
+        }
+      ],
+      "requires": [
+        "login"
+      ],
+      "risk": "medium",
+      "success": [
+        {
+          "contentType": "application/json",
+          "schema": {
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "padding": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "status": 201
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "GET /posts",
+        "listUserOrders"
+      ],
+      "auth": {
+        "kind": "none"
+      },
+      "bindings": [],
+      "entrypoint": {
+        "encoding": "none",
+        "method": "GET",
+        "url": "https://api.example/v1/posts"
+      },
+      "id": "list",
+      "input": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "key": "post.list",
+      "origin": {
+        "ref": "/actions/list",
+        "source": "aura-v2"
+      },
+      "outputs": [],
+      "risk": "low",
+      "success": [
+        {
+          "contentType": "application/json",
+          "schema": {
+            "items": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "padding": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "status": 200
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "POST /login",
+        "login"
+      ],
+      "auth": {
+        "kind": "none"
+      },
+      "bindings": [
+        {
+          "in": "body",
+          "input": "/body",
+          "target": ""
+        }
+      ],
+      "entrypoint": {
+        "encoding": "json",
+        "method": "POST",
+        "url": "https://api.example/v1/login"
+      },
+      "id": "login",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "additionalProperties": false,
+            "properties": {
+              "password": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "password"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object"
+      },
+      "key": "session.login",
+      "origin": {
+        "ref": "/actions/login",
+        "source": "aura-v2"
+      },
+      "outputs": [
+        {
+          "name": "token",
+          "pointer": "/token",
+          "required": true,
+          "source": "body",
+          "type": "string",
+          "visibility": "credential"
+        }
+      ],
+      "risk": "low",
+      "success": [
+        {
+          "contentType": "application/json",
+          "schema": {
+            "properties": {
+              "token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "token"
+            ],
+            "type": "object"
+          },
+          "status": 200
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "POST /posts/{id}/publish",
+        "publish"
+      ],
+      "auth": {
+        "input": "/header/Authorization",
+        "kind": "bearer",
+        "name": "Authorization"
+      },
+      "bindings": [
+        {
+          "explode": false,
+          "in": "path",
+          "input": "/path/id",
+          "name": "id",
+          "style": "simple"
+        },
+        {
+          "explode": false,
+          "in": "header",
+          "input": "/header/Authorization",
+          "name": "Authorization",
+          "prefix": "Bearer ",
+          "style": "simple"
+        }
+      ],
+      "entrypoint": {
+        "encoding": "none",
+        "method": "POST",
+        "url": "https://api.example/v1/posts/{id}/publish"
+      },
+      "errors": [
+        {
+          "reason": "not-authorized",
+          "status": 403
+        },
+        {
+          "reason": "rate-limited",
+          "status": 429
+        }
+      ],
+      "id": "publish",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "header": {
+            "additionalProperties": false,
+            "properties": {
+              "Authorization": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "Authorization"
+            ],
+            "type": "object"
+          },
+          "path": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "header",
+          "path"
+        ],
+        "type": "object"
+      },
+      "key": "post.publish",
+      "origin": {
+        "ref": "/actions/publish",
+        "source": "aura-v2"
+      },
+      "outputs": [],
+      "risk": "high",
+      "success": [
+        {
+          "contentType": null,
+          "status": 204
+        }
+      ]
+    }
+  ],
+  "profile": "2.0.0-alpha.3",
+  "protocol": "AURA",
+  "publisher": {
+    "name": "Recipe author",
+    "role": "third-party",
+    "url": "https://recipes.example"
+  },
+  "revision": "4dd12bcc2d3b9d63a5e0bc8e5428b8655bd5ce9c7d45855d43187619e6cc4a6b",
+  "source": {
+    "kind": "aura-v2",
+    "url": "https://recipes.example/recipes/posts-v1.json",
+    "version": "1"
+  },
+  "target": {
+    "url": "https://api.example/v1"
+  },
+  "version": "2.0"
+}

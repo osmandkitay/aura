@@ -1,0 +1,16 @@
+{
+  "archive": "aura-protocol-2.0.0-alpha.2.tgz",
+  "files": 57,
+  "archiveBytes": 41668,
+  "unpackedBytes": 185879,
+  "schemas": 6,
+  "isolatedInstall": true,
+  "externalAjv": true,
+  "cwdFallback": false,
+  "packagedRunner": true,
+  "installMs": 1315.57,
+  "firstPublishMs": 800.58,
+  "firstConsumptionMs": 384.47,
+  "elapsedMs": 4753.11,
+  "publicSchemaCheck": "passed"
+}

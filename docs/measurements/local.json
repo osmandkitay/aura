@@ -1,0 +1,247 @@
+{
+  "environment": {
+    "node": "v22.11.0",
+    "platform": "win32",
+    "arch": "x64",
+    "date": "2026-10-29T01:39:50.282Z"
+  },
+  "compilation": [
+    {
+      "selectedOperations": 1,
+      "uniqueSourceOperations": 1,
+      "elapsedMs": 95.324,
+      "peakRssBytes": 60362752,
+      "canonicalDocumentBytes": 1106
+    },
+    {
+      "selectedOperations": 10,
+      "uniqueSourceOperations": 1,
+      "elapsedMs": 248.95,
+      "peakRssBytes": 68108288,
+      "canonicalDocumentBytes": 6614
+    },
+    {
+      "selectedOperations": 50,
+      "uniqueSourceOperations": 1,
+      "elapsedMs": 641.634,
+      "peakRssBytes": 90296320,
+      "canonicalDocumentBytes": 31094
+    }
+  ],
+  "tokenizer": null,
+  "l1": [
+    {
+      "actions": 1,
+      "minifiedBytes": 594,
+      "warmInProcessCompileMs": 15.877
+    },
+    {
+      "actions": 10,
+      "minifiedBytes": 1449,
+      "warmInProcessCompileMs": 125.771
+    },
+    {
+      "actions": 50,
+      "minifiedBytes": 5249,
+      "warmInProcessCompileMs": 531.527
+    }
+  ],
+  "l2": {
+    "minifiedBytes": 1738,
+    "inputSchemaBytes": 368,
+    "responseContractBytes": 160,
+    "responseSchemaBytes": 101,
+    "dependentSchemaFetches": 0
+  },
+  "tasks": [
+    {
+      "steps": 1,
+      "mode": "first",
+      "descriptorGets": 1,
+      "detailGets": 1,
+      "apiCalls": 1,
+      "responseBytes": 28,
+      "parseProjectionMs": 1.0946000000001277,
+      "elapsedMs": 90.6848,
+      "intermediateLlmCalls": 0,
+      "networkContractBytes": 2663,
+      "modelVisibleOutputBytes": 4,
+      "resultEnvelopeBytes": 588
+    },
+    {
+      "steps": 1,
+      "mode": "cached-details",
+      "descriptorGets": 0,
+      "detailGets": 0,
+      "apiCalls": 1,
+      "responseBytes": 28,
+      "parseProjectionMs": 0.8778999999999542,
+      "elapsedMs": 4.028899999999794,
+      "intermediateLlmCalls": 0,
+      "networkContractBytes": 0,
+      "modelVisibleOutputBytes": 4,
+      "resultEnvelopeBytes": 598
+    },
+    {
+      "steps": 3,
+      "mode": "first",
+      "descriptorGets": 1,
+      "detailGets": 3,
+      "apiCalls": 3,
+      "responseBytes": 51257,
+      "parseProjectionMs": 1.620600000000195,
+      "elapsedMs": 52.812599999999975,
+      "intermediateLlmCalls": 0,
+      "networkContractBytes": 5958,
+      "modelVisibleOutputBytes": 32,
+      "resultEnvelopeBytes": 1141
+    },
+    {
+      "steps": 3,
+      "mode": "cached-details",
+      "descriptorGets": 0,
+      "detailGets": 0,
+      "apiCalls": 3,
+      "responseBytes": 51257,
+      "parseProjectionMs": 1.1491000000000895,
+      "elapsedMs": 4.290700000000015,
+      "intermediateLlmCalls": 0,
+      "networkContractBytes": 0,
+      "modelVisibleOutputBytes": 32,
+      "resultEnvelopeBytes": 1141
+    }
+  ],
+  "comparison": [
+    {
+      "representation": "full-openapi",
+      "steps": 1,
+      "mode": "first",
+      "sourceBytes": 1981,
+      "declarationBytes": 552,
+      "networkContractBytes": 2533,
+      "apiCalls": 1,
+      "sourceNetworkGets": 2,
+      "elapsedMs": 23.933,
+      "parseProjectionMs": 1.342,
+      "responseBytes": 28,
+      "modelVisibleOutputBytes": 4,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "full-openapi",
+      "steps": 1,
+      "mode": "cached-source",
+      "sourceBytes": 1981,
+      "declarationBytes": 552,
+      "networkContractBytes": 0,
+      "apiCalls": 1,
+      "sourceNetworkGets": 0,
+      "elapsedMs": 5.17,
+      "parseProjectionMs": 1.127,
+      "responseBytes": 28,
+      "modelVisibleOutputBytes": 4,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "trimmed-openapi",
+      "steps": 1,
+      "mode": "first",
+      "sourceBytes": 543,
+      "declarationBytes": 552,
+      "networkContractBytes": 1095,
+      "apiCalls": 1,
+      "sourceNetworkGets": 2,
+      "elapsedMs": 9.217,
+      "parseProjectionMs": 1.235,
+      "responseBytes": 28,
+      "modelVisibleOutputBytes": 4,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "trimmed-openapi",
+      "steps": 1,
+      "mode": "cached-source",
+      "sourceBytes": 543,
+      "declarationBytes": 552,
+      "networkContractBytes": 0,
+      "apiCalls": 1,
+      "sourceNetworkGets": 0,
+      "elapsedMs": 4.038,
+      "parseProjectionMs": 1.022,
+      "responseBytes": 28,
+      "modelVisibleOutputBytes": 4,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "full-openapi",
+      "steps": 3,
+      "mode": "first",
+      "sourceBytes": 1981,
+      "declarationBytes": 1056,
+      "networkContractBytes": 3037,
+      "apiCalls": 3,
+      "sourceNetworkGets": 2,
+      "elapsedMs": 6.1,
+      "parseProjectionMs": 1.192,
+      "responseBytes": 51257,
+      "modelVisibleOutputBytes": 32,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "full-openapi",
+      "steps": 3,
+      "mode": "cached-source",
+      "sourceBytes": 1981,
+      "declarationBytes": 1056,
+      "networkContractBytes": 0,
+      "apiCalls": 3,
+      "sourceNetworkGets": 0,
+      "elapsedMs": 4.402,
+      "parseProjectionMs": 1.151,
+      "responseBytes": 51257,
+      "modelVisibleOutputBytes": 32,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "trimmed-openapi",
+      "steps": 3,
+      "mode": "first",
+      "sourceBytes": 1678,
+      "declarationBytes": 1056,
+      "networkContractBytes": 2734,
+      "apiCalls": 3,
+      "sourceNetworkGets": 2,
+      "elapsedMs": 5.013,
+      "parseProjectionMs": 1.076,
+      "responseBytes": 51257,
+      "modelVisibleOutputBytes": 32,
+      "intermediateLlmCalls": 0
+    },
+    {
+      "representation": "trimmed-openapi",
+      "steps": 3,
+      "mode": "cached-source",
+      "sourceBytes": 1678,
+      "declarationBytes": 1056,
+      "networkContractBytes": 0,
+      "apiCalls": 3,
+      "sourceNetworkGets": 0,
+      "elapsedMs": 4.604,
+      "parseProjectionMs": 1.255,
+      "responseBytes": 51257,
+      "modelVisibleOutputBytes": 32,
+      "intermediateLlmCalls": 0
+    }
+  ],
+  "correctness": "All baseline HTTP traces and selected outputs matched AURA; no intermediate model calls.",
+  "caveats": [
+    "Loopback synthetic API; single samples, not production speed claims.",
+    "All first runs fetch their contracts over loopback: baseline source + declaration (2 GETs), AURA L1 + selected L2 (2 or 4 GETs).",
+    "Cached AURA reuses a validated prepared plan; cached baselines reuse parsed source.",
+    "All runners share API/auth/data/task/cache conditions and pipe outputs without an LLM.",
+    "Compilation peak RSS comes from a fresh Node subprocess per action count; it includes Node and module startup.",
+    "No tokenizer or token-count estimate is used.",
+    "Unsupported endpoints are covered by rejection scenarios and not timed as successful tasks.",
+    "Error/replanning paths are tested separately and excluded from success timings."
+  ]
+}

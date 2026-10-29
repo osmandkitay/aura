@@ -1,0 +1,443 @@
+[
+  {
+    "name": "four-namespaces-and-rfc6901",
+    "action": {
+      "id": "wire",
+      "key": "example.call",
+      "risk": "medium",
+      "origin": {
+        "source": "aura-v2",
+        "ref": "/actions/wire"
+      },
+      "entrypoint": {
+        "method": "POST",
+        "url": "https://api.example/v1/items/{id}",
+        "encoding": "json"
+      },
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "query": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "header": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "boolean"
+              }
+            }
+          },
+          "body": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "bindings": [
+        {
+          "input": "/path/id",
+          "in": "path",
+          "name": "id",
+          "style": "simple",
+          "explode": false
+        },
+        {
+          "input": "/query/id",
+          "in": "query",
+          "name": "id",
+          "style": "form",
+          "explode": true
+        },
+        {
+          "input": "/query/tags",
+          "in": "query",
+          "name": "tags",
+          "style": "form",
+          "explode": true
+        },
+        {
+          "input": "/header/id",
+          "in": "header",
+          "name": "id",
+          "style": "simple",
+          "explode": false
+        },
+        {
+          "input": "/body",
+          "in": "body",
+          "target": ""
+        }
+      ],
+      "auth": {
+        "kind": "none"
+      },
+      "success": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "flag": {
+                "type": "boolean"
+              },
+              "count": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "nil": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "a/b": {
+                "type": "object",
+                "properties": {
+                  "~": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "flag",
+          "pointer": "/flag",
+          "type": "boolean",
+          "source": "body",
+          "required": true,
+          "visibility": "model"
+        },
+        {
+          "name": "count",
+          "pointer": "/count",
+          "type": "integer",
+          "source": "body",
+          "required": true,
+          "visibility": "model"
+        },
+        {
+          "name": "name",
+          "pointer": "/name",
+          "type": "string",
+          "source": "body",
+          "required": true,
+          "visibility": "model"
+        },
+        {
+          "name": "nil",
+          "pointer": "/nil",
+          "type": [
+            "string",
+            "null"
+          ],
+          "source": "body",
+          "required": true,
+          "visibility": "model"
+        },
+        {
+          "name": "escaped",
+          "pointer": "/a~1b/~0/0",
+          "type": "string",
+          "source": "body",
+          "required": true,
+          "visibility": "model"
+        }
+      ]
+    },
+    "input": {
+      "path": {
+        "id": "a/b ?"
+      },
+      "query": {
+        "id": 7,
+        "tags": [
+          "red blue",
+          "x/y"
+        ]
+      },
+      "header": {
+        "id": false
+      },
+      "body": {
+        "id": "body"
+      }
+    },
+    "response": {
+      "flag": false,
+      "count": 0,
+      "name": "",
+      "nil": null,
+      "a/b": {
+        "~": [
+          "yes"
+        ]
+      }
+    },
+    "expectedRequest": {
+      "method": "POST",
+      "url": "https://api.example/v1/items/a%2Fb%20%3F?id=7&tags=red+blue&tags=x%2Fy",
+      "headers": {
+        "accept": "application/json",
+        "id": "false",
+        "content-type": "application/json"
+      },
+      "body": "{\"id\":\"body\"}"
+    },
+    "expectedOutputs": {
+      "flag": false,
+      "count": 0,
+      "name": "",
+      "nil": null,
+      "escaped": "yes"
+    }
+  },
+  {
+    "name": "optional-body-and-no-content",
+    "action": {
+      "id": "optional",
+      "key": "example.call",
+      "risk": "medium",
+      "origin": {
+        "source": "aura-v2",
+        "ref": "/actions/wire"
+      },
+      "entrypoint": {
+        "method": "POST",
+        "url": "https://api.example/v1/items/{id}",
+        "encoding": "json"
+      },
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "query": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "header": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "boolean"
+              }
+            }
+          },
+          "body": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "bindings": [
+        {
+          "input": "/path/id",
+          "in": "path",
+          "name": "id",
+          "style": "simple",
+          "explode": false
+        },
+        {
+          "input": "/query/id",
+          "in": "query",
+          "name": "id",
+          "style": "form",
+          "explode": true
+        },
+        {
+          "input": "/query/tags",
+          "in": "query",
+          "name": "tags",
+          "style": "form",
+          "explode": true
+        },
+        {
+          "input": "/header/id",
+          "in": "header",
+          "name": "id",
+          "style": "simple",
+          "explode": false
+        },
+        {
+          "input": "/body",
+          "in": "body",
+          "target": ""
+        }
+      ],
+      "auth": {
+        "kind": "none"
+      },
+      "success": [
+        {
+          "status": 204,
+          "contentType": null
+        }
+      ],
+      "outputs": []
+    },
+    "input": {
+      "path": {
+        "id": "x"
+      }
+    },
+    "expectedRequest": {
+      "method": "POST",
+      "url": "https://api.example/v1/items/x",
+      "headers": {}
+    },
+    "expectedOutputs": {}
+  },
+  {
+    "name": "explicit-api-key-header",
+    "action": {
+      "id": "api-key",
+      "key": "example.call",
+      "risk": "medium",
+      "origin": {
+        "source": "aura-v2",
+        "ref": "/actions/wire"
+      },
+      "entrypoint": {
+        "method": "GET",
+        "url": "https://api.example/v1/items",
+        "encoding": "none"
+      },
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "header"
+        ],
+        "properties": {
+          "header": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "X-API-Key"
+            ],
+            "properties": {
+              "X-API-Key": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "bindings": [
+        {
+          "input": "/header/X-API-Key",
+          "in": "header",
+          "name": "X-API-Key",
+          "style": "simple",
+          "explode": false
+        }
+      ],
+      "auth": {
+        "kind": "api-key",
+        "input": "/header/X-API-Key",
+        "name": "X-API-Key"
+      },
+      "success": [
+        {
+          "status": 204,
+          "contentType": null
+        }
+      ],
+      "outputs": []
+    },
+    "input": {
+      "header": {
+        "X-API-Key": "caller-key"
+      }
+    },
+    "expectedRequest": {
+      "method": "GET",
+      "url": "https://api.example/v1/items",
+      "headers": {
+        "x-api-key": "caller-key"
+      }
+    },
+    "expectedOutputs": {}
+  }
+]

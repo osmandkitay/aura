@@ -1,33 +1,29 @@
 {
   "name": "aura-protocol",
-  "version": "1.0.5",
-  "description": "Core TypeScript definitions and JSON Schema for the AURA protocol - making websites machine-readable for AI agents",
+  "version": "2.0.0-alpha.3",
+  "description": "Small deterministic AURA compiler, static publisher and linear HTTP runner",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "scripts": {
-    "build": "tsc && npm run generate-schema",
-    "generate-schema": "ts-node scripts/generate-schema.ts",
+    "build": "node scripts/generate-schema.mjs --check && node scripts/clean-dist.mjs && tsc && node scripts/prepare-dist.mjs",
     "prepublishOnly": "npm run build"
   },
   "bin": {
-    "aura-validate": "./dist/cli/aura-validate.js"
+    "aura-protocol": "./dist/cli/aura-protocol.js",
+    "aura-validate": "./dist/cli/aura-validate.js",
+    "aura-runner": "./dist/cli/aura-runner.js"
   },
   "keywords": [
     "aura",
     "protocol",
-    "ai",
-    "agent",
     "web",
-    "machine-readable",
-    "json-schema",
-    "typescript",
-    "api",
-    "automation"
+    "actions",
+    "schema",
+    "cli"
   ],
   "author": "Dervis-ofAI",
   "license": "MIT",
@@ -41,17 +37,24 @@
     "url": "https://github.com/osmandkitay/aura/issues"
   },
   "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {
-    "@types/json-schema": "^7.0.15",
-    "axios": "^1.10.0",
-    "ts-node": "^10.9.2",
-    "typescript-json-schema": "^0.65.1"
+    "access": "public",
+    "tag": "alpha"
   },
   "dependencies": {
-    "citty": "^0.1.6",
-    "kleur": "^4.1.5",
     "ajv": "^8.17.1"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./runner": {
+      "types": "./dist/runner/index.d.ts",
+      "default": "./dist/runner/index.js"
+    },
+    "./schemas/*": "./dist/*"
   }
 }

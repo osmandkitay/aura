@@ -1,3 +1,6 @@
+# Local task notes
+/task.md
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -5,11 +8,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Production builds
+# Generated outputs
 dist/
 build/
 .next/
 out/
+.derived/
 
 # TypeScript
 *.tsbuildinfo

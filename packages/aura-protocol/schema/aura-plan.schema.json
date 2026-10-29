@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "profile",
+    "descriptor",
+    "steps"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/osmandkitay/aura/v2.0.0-alpha.3/packages/aura-protocol/schema/aura-plan.schema.json"
+    },
+    "profile": {
+      "const": "2.0.0-alpha.3"
+    },
+    "descriptor": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^https?://"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stepId",
+          "actionId",
+          "inputs"
+        ],
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
+          },
+          "actionId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "target"
+              ],
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "pattern": "^(?:/(?:[^~]|~[01])*)*$"
+                },
+                "value": {
+                  "$ref": "#/$defs/json"
+                },
+                "from": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "step",
+                    "output"
+                  ],
+                  "properties": {
+                    "step": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
+                    },
+                    "output": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.|$))[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?$"
+                    }
+                  }
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "value"
+                  ],
+                  "not": {
+                    "required": [
+                      "from"
+                    ]
+                  }
+                },
+                {
+                  "required": [
+                    "from"
+                  ],
+                  "not": {
+                    "required": [
+                      "value"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "number",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  }
+}
