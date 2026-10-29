@@ -22,14 +22,31 @@ integrity: sha512-Ik3MZ+WfTXSAO4R3kiCTofl+3XMaCrp3tDChiOTuVHkj0BJ4cBJ5GOppyKbbEt
 shasum: 2e70da11e80c7b919739e87bfb285e30814476c5
 ```
 
-`npm whoami` now returns `dervisofai`; `npm access list collaborators aura-protocol
---json` reports `read-write` for that identity. The exact retained archive was
-submitted with `--tag alpha --access public`, but npm rejected publication with
-E403: two-factor authentication or a granular access token with bypass 2FA is
-required. Subsequent registry inspection confirms alpha.3 is absent, there is no
-alpha dist-tag, and `latest=1.0.5` is unchanged. Interactive publisher authorization
-is the remaining publication blocker. Registry integrity and an exact-version
-registry installation outside the repository remain pending until publication.
+`npm whoami` returns `dervisofai`; `npm access list collaborators aura-protocol
+--json` reports `read-write` for that identity. After the publisher enabled 2FA,
+the exact retained archive was published from Windows with `--tag alpha
+--access public --registry=https://registry.npmjs.org/ --auth-type=web` and the
+publisher completed npm's browser confirmation. Npm initially reported processing;
+subsequent registry queries confirmed version `2.0.0-alpha.3`,
+`alpha=2.0.0-alpha.3` and unchanged `latest=1.0.5`. The earlier E403 is resolved.
+
+[Published npm version](https://www.npmjs.com/package/aura-protocol/v/2.0.0-alpha.3).
+Registry `dist.integrity` and `dist.shasum` exactly match the values above, and a
+fresh download of the registry tarball is byte-for-byte identical to the retained
+archive. No archive was rebuilt or repacked for publication.
+
+Fresh post-publication checks on Windows installed
+`aura-protocol@2.0.0-alpha.3` from the public registry in a temporary directory
+outside the repository, using a fresh npm cache, exact version and no install
+scripts. All 59 installed package files match the retained archive. The installed
+`aura-protocol` CLI passed derive, publish and validate; `aura-validate` validated
+the published descriptor; `aura-runner` executed the prepared HTTP plan once and
+returned the expected typed output. All three installed executable shims and
+entrypoint shebangs are present. Compiler and runner package imports, independent
+Ajv validation of all six formats, and all six public-schema byte comparisons
+passed. Removing an installed schema caused validation to fail as expected,
+confirming there is no working-directory schema fallback. There is no remaining
+publication or verification blocker.
 
 Workspace/package versions, profile constants/types, six generated schemas and
 examples agree on 2.0.0-alpha.3; the lockfile has no workspace version entry to
@@ -185,5 +202,6 @@ Committed Git schema bytes also match the working tree without newline changes.
 [tag CI](https://github.com/osmandkitay/aura/actions/runs/40802809571) both passed
 on Windows and Linux: install, build, 75 scenarios, schema consistency and
 isolated archive. The tag jobs additionally passed the public byte comparison.
-All required acceptance checks pass within the documented profile. The user
-approved Git publication; an npm registry release has not been performed.
+All required acceptance checks passed within that documented alpha.2 profile.
+At that checkpoint the user had approved Git publication; npm publication had
+not been performed.

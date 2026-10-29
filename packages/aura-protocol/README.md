@@ -14,12 +14,13 @@ are separate provenance claims. The API enforces actual authority.
 ## Local build and package truth
 
 Build from `master` with `pnpm install && pnpm build`.
-Schema URLs target the immutable Git tag `v2.0.0-alpha.3`. Public availability
-and exact schema bytes must pass tag CI before npm publication. The npm release
-is pending interactive 2FA authorization; npm identity and package write access
-are verified. Existing release tags remain unchanged.
-Use a locally packed tarball until its npm release. After an exact-version release,
-install `aura-protocol@2.0.0-alpha.3`; avoid an unpinned latest tag.
+Schema URLs target the immutable Git tag `v2.0.0-alpha.3`; public availability
+and exact schema bytes passed Linux/Windows release CI. The verified archive is
+[published on npm](https://www.npmjs.com/package/aura-protocol/v/2.0.0-alpha.3),
+with matching registry integrity and a passing isolated installation of all
+three CLIs. Install with `npm install aura-protocol@2.0.0-alpha.3`.
+The `alpha` dist-tag selects this release; `latest` remains 1.0.5. Existing Git
+release tags remain unchanged.
 
 ```bash
 aura-protocol derive openapi.json --config aura.config.json

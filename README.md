@@ -6,12 +6,14 @@ A consumer selects a complete plan; a deterministic runner performs its HTTP
 calls and transfers selected outputs without intermediate model calls.
 
 This is a one-package workspace on `master`, following the merge of PR #7.
-The incompatible profile is `2.0.0-alpha.3`. Its immutable Git tag, public schema
-bytes and Linux/Windows release CI are verified. Npm identity and package write
-access are verified; publication still requires interactive 2FA authorization.
-Use the local build or retained verified tarball until that registry gate passes.
+The incompatible profile is `2.0.0-alpha.3`, now
+[published on npm](https://www.npmjs.com/package/aura-protocol/v/2.0.0-alpha.3).
+Its immutable Git tag, public schema bytes and Linux/Windows release CI are
+verified. The registry archive matches the retained release archive exactly;
+an isolated exact-version installation passed all three CLI checks.
+Install with `npm install aura-protocol@2.0.0-alpha.3`.
 See [current verification status](docs/implementation.md). Existing Git tags and
-the npm `latest=1.0.5` dist-tag are preserved.
+the npm `latest=1.0.5` dist-tag are preserved; `alpha=2.0.0-alpha.3`.
 
 ## Build and publish
 
@@ -114,8 +116,8 @@ pnpm check:package
 
 Packaging installs `npm pack` output outside this repository, runs all three
 CLIs, compares bundled schema bytes and checks independent Ajv validation with
-no working-directory fallback. After the new tag is publicly released, the
-additional release gate is:
+no working-directory fallback. The additional public-schema release gate,
+already passed for alpha.3, is:
 
 ```bash
 node scripts/check-package.mjs --remote
@@ -123,8 +125,7 @@ node scripts/check-package.mjs --remote
 
 That gate requires each public schema URL to return exactly the packaged bytes.
 A missing public tag is a failed release gate, not a successful local fallback.
-Exact-version npm commands become valid only after the corresponding package is
-published; no command assumes that alpha.3 is already in the registry.
+Alpha.3 is available from npm by exact version; `latest` still selects 1.0.5.
 
 [Acceptance evidence and limitations](docs/implementation.md),
 [measured results](docs/measurements/README.md),

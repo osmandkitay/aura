@@ -6,9 +6,11 @@ rejected directly; no migration runtime or compatibility adapter is shipped.
 Use a clean publish directory when changing profiles; an old-profile descriptor
 does not establish ownership of files for the current publisher.
 Existing release tags are immutable. Public schema commands require the new
-alpha.3 tag and verified schema bytes; npm install commands require the separate
-registry publication, currently pending interactive 2FA authorization after
-successful identity and package write-access checks.
+alpha.3 tag and verified schema bytes; that gate and the separate npm registry
+publication are complete. Install `aura-protocol@2.0.0-alpha.3` explicitly:
+`alpha=2.0.0-alpha.3`, while `latest` remains 1.0.5. Registry integrity and an
+isolated installation of all three CLIs are verified; see the
+[release evidence](../implementation.md).
 
 ## Changes from alpha.2
 
