@@ -3,6 +3,10 @@
 Profile: `2.0.0-alpha.3`. Old release tags are never rewritten. Public schema
 availability is a separate release gate, not implied by a local build.
 
+AURA is an experimental independent proposal. This contract is intended to be
+implementable without this repository; no W3C/IETF endorsement or well-known
+URI registration is claimed.
+
 ## Identity and provenance
 
 `id` is a publisher-assigned, case-sensitive, file-safe locator unique within
@@ -45,6 +49,13 @@ nullable body children are not advertised as unconditionally required.
 No second index GET is required. L2 remains .well-known/aura/actions/{id}.json,
 containing $schema/profile/revision/publisher/source/target and the full action.
 Relative href aura/actions/{id}.json resolves against the descriptor URL.
+
+The descriptor and its action files may be served by a third-party static host;
+the declared target API may have a different origin. A compatible local consumer
+fetches artifacts from the descriptor host and sends HTTP requests directly to
+the API. No AURA account, catalog or execution intermediary is required. Recipe
+publication grants no account access or target-site endorsement. A revision is
+a content hash, not proof of publisher identity or an intended business outcome.
 
 Actions require id, key, risk, entrypoint, input, bindings, auth, success, outputs
 and origin; title/aliases/requires/errors are optional. entrypoint has method,

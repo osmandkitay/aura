@@ -10,6 +10,11 @@ a draft; post.publish publishes a selected draft; post.list reads posts. Custom
 keys require no registry approval. Equal keys do not imply equal inputs, units
 or permissions. Explicit locators survive sibling additions and key corrections.
 
+Third-party declarations remain third-party claims even when hosted at a
+convenient descriptor URL. A valid schema or content revision cannot prove that
+an action achieves the caller's intended business outcome or identify its
+publisher. The target API continues to decide account access and authority.
+
 Output visibility is another explicit declaration. Overlapping projections with
 different visibility conflict and fail compilation; the runtime does not guess
 which fields to redact. Exact large IDs must be strings in the API contract,

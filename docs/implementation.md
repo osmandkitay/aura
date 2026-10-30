@@ -1,176 +1,76 @@
-# Alpha.3 release preparation (2026-10-29)
+# Core verification
 
-Release preparation starts from reviewed commit `a25ea33ec76d992b34935eebe53b73d93f2fce66`.
-The remote implementation branch still points there. Its [CI run](https://github.com/osmandkitay/aura/actions/runs/40810648388)
-passed Linux and Windows install, build, scenario tests, schema consistency and
-isolated archive checks. That evidence is reused for unchanged product code.
-Only release-status documentation changes in this preparation.
+The supported contract is `2.0.0-alpha.3`. This page records the implementation
+boundaries and reproducible evidence; future release gates are in the
+[release checklist](releasing.md).
 
-Registry inspection found versions 1.0.0 through 1.0.5, `latest=1.0.5`, no alpha
-dist-tag and no alpha.3 release. Remote alpha.1/alpha.2 tags are preserved.
-Workspace/package versions, profile constants/types, six generated schemas and
-examples already agree on 2.0.0-alpha.3; the lockfile has no workspace version
-entry to update. `task.md` remains ignored and untracked; generated output is
-excluded from commits.
+## Local distribution and execution
 
-Npm publication is blocked: `npm whoami` and `npm access list packages --json`
-return E401 Unauthorized. No registry upload has been attempted. After the exact
-release commit is built and its archive independently installed, the new
-annotated tag must pass Linux/Windows CI and all six public schema URLs must
-match the packaged bytes. The PR records the final commit, archive integrity,
-tag and gate evidence. Publish that verified archive with `--tag alpha` only
-after those gates and authenticated package write access; preserve `latest`.
-Registry integrity and installation outside the repository remain pending until
-publication succeeds. Historical alpha.2 measurements are not alpha.3 benchmarks.
+`derive` takes local OpenAPI plus an explicit declaration, or a fully authored
+normal form. `publish` emits a descriptor and relative action details. A local
+consumer can fetch these from a separate static host and call the declared target
+API directly. Execution requires neither source OpenAPI at runtime nor AURA
+software on the API host, an AURA account or an AURA intermediary.
 
-## Previous implementation review and verification
+`tests/scenarios/interop.test.ts` serves identical recipes at site-owned and
+third-party subdirectory URLs, disables the API host's AURA files, and compares
+the reference runner's requests with an independent consumer's requests.
+The authored-input scenario verifies the same path without source OpenAPI.
+These fixtures establish interoperability within the supported profile, not
+universal agent compatibility.
 
-Reviewed `f943371` on `feat/aura-declarative-runner` against the local task
-requirements before product edits. The tracked worktree started clean. Baseline
-install/build and all 75 tests passed. An initial test invocation overlapped
-build cleanup and hit a missing dist CLI; the ordered rerun passed.
+## Verification on 2026-10-30
 
-Four focused regressions failed on the reviewed implementation: an unsafe JSON
-integer reached the next request as a rounded ID; a model-visible parent could
-include a credential projection; validation decoded URL placeholders that the
-request builder left untouched; and execution discarded State entries for
-other actions. The fixes reject unsupported numbers recursively (also in
-literals, schema data and open-schema values), reject overlapping visibility,
-match literal URL templates consistently and retain all validated State entries
-on each response. No availability cache or automatic recovery was added.
+Windows, Node.js v22.11.0, pnpm 10.7.1. No product code or protocol changes were
+needed for the separate-host path.
 
-The checker also failed with standalone Node despite npm being on PATH. It now
-discovers npm through its launcher or npm execution context; the same standalone
-Node experiment passes. Both obsolete OpenAPI fixtures had no live references;
-their scenarios use the current explicit-declaration fixture. They were removed.
-The packaged migration document now describes the current contract instead of
-shipping the superseded rewrite checklist; Git retains that history.
-
-The corrected contract is `2.0.0-alpha.3`, with regenerated schemas, matching
-types/examples and a recomputed authored-example revision. Existing alpha.1 and
-alpha.2 tags remain unchanged. No compatibility adapter or npm release was added.
-
-Verification on Windows with Node v22.11.0 and pnpm 10.7.1:
-
-- `pnpm install`: passed; lockfile unchanged. Ignored optional dependency build
-  scripts did not block build or tests.
-- `pnpm build`: passed, including schema drift and compiler-free runner assets.
-- `pnpm test --run`: **83 passed in 17 files**, including the eight new review
-  cases, State failures, real HTTP integration, independent consumers, stable
-  identity, publication rollback, CLI and fair OpenAPI baseline checks.
-- `pnpm check:schemas`: passed for all six generated schemas.
-- `pnpm check:package`: passed. The isolated archive installed outside the repo;
-  all three CLIs, six bundled schema byte comparisons, external Ajv validation,
-  packaged execution and the installed-schema/no-CWD-fallback check passed.
-- Standalone Node with npm available only through PATH: the full package check
-  passed after reproducing its previous discovery failure.
-- README derive/publish/validate and authored-input commands: passed. An existing
-  ignored alpha.2 publication was preserved under `.derived` before publishing
-  into a clean output directory; profile changes do not bypass ownership checks.
-- `git diff --check`: passed.
-
-At the previous review, `node scripts/check-package.mjs --remote` failed with **HTTP 404** for the new
-alpha.3 schema tag. This is an unmet public-release prerequisite, not a passing
-schema check or an environmental blocker. No alpha.3 tag or npm package had
-been published at that review. Local verification had no remaining environmental blockers.
-`task.md` is unchanged locally, removed from tracking and ignored; it is excluded
-from the new commit tree. Earlier Git history is unchanged. Fractional numbers retain binary64 rounding,
-credentials still depend on explicit declarations, and the scope limits in the
-spec continue to apply. Historical measurement JSON remains labelled alpha.2.
-
-## Historical alpha.2 implementation record
-
-Branch: `feat/aura-declarative-runner`, based on
-`ba534d1983a2ee3b90c687bef7474393c6c3d589` (`origin/aura-core-v2`).
-Initial worktree: clean tracked files on master; untracked `task.md`, preserved
-unchanged. Master and existing release tags are preserved.
-
-G0 baseline: `pnpm install` passed after allowing dependency access; `pnpm build`
-passed; `pnpm test --run` passed (10 files, 19 tests). Vitest initially failed
-with sandbox `spawn EPERM`; the authorized rerun completed. Alpha.1 tests cover
-inference and identity behavior deliberately broken by the new contract.
-
-The contract was fixed in `docs/spec/aura-v2-core.md` before implementation.
-`task.md` is retained unchanged; its worktree SHA-256 is
-`cc89b751e46d448538b9a3b4d7714561248c5ba3685c5e4a8ca80def91d1299e`.
-
-## Stage evidence
-
-| Stage | Implementation and verified gate |
+| Check | Result |
 | --- | --- |
-| G0 | Baseline recorded above; config/L1/L2/plan/State field semantics and breaking changes fixed before product edits; narrow runner boundary recorded in AGENTS/spec/architecture. |
-| G1 | Explicit selections, stable ids, declared key/risk, portable provenance, fully authored input. Declaration, collision and locator scenarios passed before runner work. No inference/confidence/confirmation module remains. |
-| G2 | Selected local refs, supported schema transformations, four HTTP namespaces, exact server/media/auth profile, optional body/no-content success. 15 focused compiler scenarios passed; limits/numeric-field/validator regressions also pass. |
-| G3 | Six schemas/types/version pins, compact signatures/relative hrefs, shared revision, linked publication validation, staging and synchronous rollback. Publication scenarios and isolated npm archive passed before runner work. All six public schema URLs now return identical packaged bytes. |
-| G4 | Preflight of all selected details and bindings; deterministic HTTP, response validation and projection; separate repeated step results; private credential transfer; partial/unknown outcomes and no automatic recovery. 19 runner scenarios pass. |
-| G5 | Versioned 4096-byte State, response-scoped observations, unknown/malformed/stale handling, declared resolver hints and 401/403/429. 13 State scenarios pass; State never overrides HTTP or inserts actions. |
-| G6 | Site-hosted and third-party/raw-style URLs serve the same bytes; API AURA files can be disabled. Fully authored static input also executes. Independent consumer, three common vectors, fair full/trimmed OpenAPI baselines, actual costs and clean-directory package quickstart pass. |
+| `pnpm install --frozen-lockfile` | Passed; lockfile unchanged. |
+| `pnpm build` | Passed; schema drift checked and dist rebuilt. |
+| `pnpm test --run` | 83 tests in 17 files passed; process exited normally. No full-suite stall reproduced. |
+| `pnpm check:schemas` | All six generated schemas match source. |
+| `pnpm check:package` | Passed: exact local archive installed cleanly; all three CLIs, independent Ajv and no-CWD-fallback checks passed. |
+| `node scripts/check-package.mjs --remote` | Passed: all six public immutable schemas match source and packaged bytes. |
+| Pack contents | 59 files; only package metadata, README and intended dist assets. No task briefs/drafts, dependencies, caches, credentials or archives. |
+| README quickstart | Both README fixtures match; exact published alpha.3 install passed all three CLIs with separate artifact/API hosts and the expected typed output. |
 
-## Final local checks
+The quickstart verification used only substituted fixture origins: two artifact
+GETs and one direct API POST. The API's descriptor and OpenAPI URLs returned 404.
+Package subprocess/cache checks initially hit sandbox EPERM; authorized reruns
+outside the sandbox passed. This was an environment restriction, not a test pass
+or a product defect.
 
-- `pnpm install`: passed; lockfile unchanged. pnpm reports ignored optional build
-  scripts; the required build and test processes still completed successfully.
-- `pnpm build`: passed, including generated-schema drift check and clean dist.
-- `pnpm test --run`: **75 passed in 16 files**, process exited successfully.
-- `pnpm check:schemas`: passed for all six version-pinned schemas.
-- `pnpm check:package -- --record`: passed. The final 57-file, 41,668-byte archive was
-  installed outside the repo; installed compiler/validator/runner, all six schema
-  byte comparisons and independent Ajv validations passed. Installed-schema
-  removal failed validation as expected, proving no CWD fallback.
-- README derive/publish/validate and fully authored derive commands: passed.
-- `git diff --check`: passed before this evidence update.
+The scenario suite also covers explicit declarations, stable identity/provenance,
+publication ownership and synchronous rollback, unsupported mechanics,
+credential visibility, numeric safety, typed output transfer, State, partial
+completion and unknown transport outcomes. Historical measurements remain
+labelled with their measured profile in [measurements](measurements/README.md).
 
-The first full implementation run exposed two remaining alpha.1 expectations
-and measurement contention at the default timeout. The tests were migrated to
-the declared new contract, concurrency bounded, and the dedicated measurement
-test given time for three isolated Node processes. Correctness assertions were
-retained. Actual review regressions (numeric object keys, validator-excluded
-properties, known HTTP status during cleanup failure) are covered explicitly.
+The package checker builds an archive from the current dist, installs that exact
+archive outside the repository, checks executable shims/imports, runs derive,
+publish, validation and execution, compares bundled schemas, and validates
+artifacts independently with Ajv. Removing an installed schema must fail rather
+than falling back to repository files. Run `pnpm check:package` after building;
+its temporary installation is removed on completion. The `--remote` variant also
+requires all six public immutable schema URLs to return exactly the local bytes.
 
-## Acceptance scenarios
+## Published version and future work
 
-| task.md scenarios | Evidence |
-| --- | --- |
-| 1–2 | `normalization.test.ts`: missing declarations and misleading names/prose. |
-| 3–5 | `collision-stability`, `locator-identity-regressions`, `determinism-openapi-order`, `stable-stringify`: sibling cardinality, local paths/object order, stable locators and content revisions. |
-| 6–8 | `tur-1-hardening`: refs, recursion/remote/dynamic/variants, safe allOf and explicit rejection of closed composition. |
-| 9–12 | Compiler/runner scenarios and common vectors: independent namespaces, optional body, override/base path/encoding, unsupported media/auth/serialization. |
-| 13 | Isolated archive, offline/external schemas and all six immutable public schema URLs pass, with exact byte equality. |
-| 14–15 | Publication scenarios: broken href, duplicate id, mixed revision, removal, unowned paths and injected mid-commit failure. Runner rejects mixed detail revisions before API calls. |
-| 16–22 | Runner scenarios: 50 KiB response, falsy/null and escaped/index pointers, missing/mistyped outputs, repeated creates, static plan errors, private token transfer and one supplied plan. |
-| 23–24 | State scenarios: absent/malformed/large/stale, response-scoped unknown, 401/403/429 and resolver hints without recovery. |
-| 25 | Runner and real HTTP fixtures: create then rejection, create timeout and retained previous completion without retry/rollback. |
-| 26–28 | Real HTTP interop with target-side AURA disabled, same-key cross-site body signatures, common independent request/projection vectors and independent execution of both source routes. |
+Read-only npm queries on 2026-10-30 confirmed `2.0.0-alpha.3`,
+`alpha=2.0.0-alpha.3` and `latest=1.0.5`. The package requires Node.js >=20.19.
+The registry integrity for alpha.3 is:
 
-## Measurements and limits
+```text
+sha512-Ik3MZ+WfTXSAO4R3kiCTofl+3XMaCrp3tDChiOTuVHkj0BJ4cBJ5GOppyKbbEtzX2Cjx8mO/78XFytObdfTjLg==
+```
 
-[Actual results and reproducible commands](measurements/README.md) include
-1/10/50-action L1 bytes, L2/schema bytes, isolated compile time/peak RSS,
-one/three-step cold/cached calls, response/model-visible bytes, and equivalent
-full/trimmed OpenAPI executors with zero intermediate LLM calls. These small
-fixtures establish no general performance or reliability advantage.
+These metadata checks do not make a changed local archive the published archive.
+Documentation edits cannot replace an existing npm tarball. Existing tags and
+releases are preserved; no version bump or npm mutation is part of this cleanup.
+The [migration document](migration/v1-to-v2-plan.md) describes contract differences.
 
-The profile rejects unsupported features rather than inventing them. Its exact
-keyword, media, auth, server, recursion, size, index and pointer limits are in
-the spec. Ajv-excluded `__proto__` schema properties are an explicit rejection.
-No interactive OAuth/cookie/CSRF, variants, retry/rollback, job engine or model
-planner is claimed. Publication rollback covers synchronous local errors, not
-process crashes or CDN atomic deployment. Revision is not publisher identity.
-
-## Public schema release verified
-
-The first `node scripts/check-package.mjs --remote` run failed with HTTP **404**
-because the new tag did not exist. After explicit user approval, the branch and
-new annotated `v2.0.0-alpha.2` tag were pushed atomically. The tag is fixed at
-`06ef7a17d7ad9db90e099d12fb5a730050f03285`; alpha.1 and master are unchanged.
-
-`node scripts/check-package.mjs --remote --record` then **passed**: all six URLs
-returned HTTP 200 and exactly matched the source and packed schema bytes.
-Committed Git schema bytes also match the working tree without newline changes.
-
-[Branch CI](https://github.com/osmandkitay/aura/actions/runs/40802807541) and
-[tag CI](https://github.com/osmandkitay/aura/actions/runs/40802809571) both passed
-on Windows and Linux: install, build, 75 scenarios, schema consistency and
-isolated archive. The tag jobs additionally passed the public byte comparison.
-All required acceptance checks pass within the documented profile. The user
-approved Git publication; an npm registry release has not been performed.
+AURA is an experimental independent proposal. The contract and independent
+request/projection vectors are implementable evidence, without a standards
+endorsement or well-known registration claim. Discovery services, catalogs,
+agent integrations and hosted execution remain separate projects.
