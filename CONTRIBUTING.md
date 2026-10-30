@@ -14,6 +14,9 @@ Prefer changes that improve the AURA core:
 - the explicitly scoped linear runner, without compiler imports or recovery engines
 - honest documentation
 
+Keep the public workflow to `derive` then `publish`. Publishers must declare
+semantics and risk explicitly; preserve provenance in `aliases` and `origin`.
+
 Do not add:
 
 - demo apps
@@ -26,12 +29,15 @@ Do not add:
 ## Development
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm build
 pnpm test --run
 pnpm check:schemas
 pnpm check:package
 ```
+
+Use Node.js >=20.19 and pnpm 10.7.1. See the [release checklist](docs/releasing.md)
+for archive inspection, isolated installation and public schema checks.
 
 ## Standards
 

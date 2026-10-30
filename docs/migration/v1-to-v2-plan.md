@@ -1,13 +1,17 @@
 # Current contract changes
 
-The active profile is `2.0.0-alpha.3`; see [the contract](../spec/aura-v2-core.md).
+The active profile is `2.0.0-alpha.3`; see
+[the contract](https://github.com/osmandkitay/aura/blob/master/docs/spec/aura-v2-core.md).
 Regenerate declarations and artifacts against this profile. Older formats are
 rejected directly; no migration runtime or compatibility adapter is shipped.
 Use a clean publish directory when changing profiles; an old-profile descriptor
 does not establish ownership of files for the current publisher.
-Existing release tags are immutable. Public schema commands require the new
-alpha.3 tag and verified schema bytes; npm install commands require the separate
-registry publication, currently pending authenticated publisher access.
+Existing release tags are immutable. Read-only npm metadata checked on
+2026-10-30 confirms `2.0.0-alpha.3` under `alpha`; `latest` still selects `1.0.5`.
+Install with `npm install --save-exact aura-protocol@2.0.0-alpha.3`. Public schema
+byte comparisons remain a separate check; local builds alone cannot prove their
+availability. See the
+[future release checklist](https://github.com/osmandkitay/aura/blob/master/docs/releasing.md).
 
 ## Changes from alpha.2
 

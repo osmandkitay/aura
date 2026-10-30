@@ -1,5 +1,10 @@
 # Local task notes
 /task.md
+/AURA-CORE-TASK.md
+/README-example.md
+/distribution.md
+/releasing.md
+/local-first-distribution.patch
 
 # Dependencies
 node_modules/
@@ -14,6 +19,9 @@ build/
 .next/
 out/
 .derived/
+*.tgz
+.cache/
+.npm/
 
 # TypeScript
 *.tsbuildinfo
