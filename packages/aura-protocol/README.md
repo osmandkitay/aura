@@ -173,5 +173,8 @@ State never authorizes access or inserts actions.
 
 Share descriptor URLs directly or through existing docs/Git repositories.
 Compatible consumer support is required. Optional catalogs and integrations
-belong outside this core, which includes no planner, model, crawler, browser
-automation, hosted service, scheduler, database or demo application stack.
+belong outside this core.
+
+The core is not a hosted runtime or framework: it does not crawl the web;
+it does not automate browsers; it does not host a bridge, index, or signing service.
+No planner, scheduler, model, database or demo application stack is included.

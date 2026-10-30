@@ -174,8 +174,9 @@ substitute for API authorization or a trigger for automatic recovery.
 
 Schema validity cannot establish the user's intended business outcome. A
 content hash detects content changes; it does not establish publisher identity.
-The core includes no crawler, browser automation, hosted runtime, planner,
-scheduler, model, database or demo application stack.
+The core is not a hosted runtime or framework: it does not crawl the web;
+it does not automate browsers; it does not host a bridge, index, or signing service.
+No planner, scheduler, model, database or demo application stack is included.
 
 ## Verify and contribute
 
